@@ -8,6 +8,8 @@ class SCMGenerator():
     methods:
         __init__: initializes the SCM generator with the specified number of nodes, clusters and a sparsity parameter
         make_dag: generates a random DAG with the specified number of nodes and clusters
+        scm_equations: returns the SCM equations in written form
+        generate_data: generates data according to the SCM equations
     """
 
     def __init__(self, num_nodes, num_clusters, in_cluster_connectivity = 0.5, between_cluster_connectivity = 0.2, seed = None):
@@ -100,7 +102,6 @@ class SCMGenerator():
         data = np.zeros((len(self.nodes), samples))
         for node in self.topological_order:
             data_node = np.random.normal(size = samples)
-            print(f'random data is{data_node}')
             for parent in self.parents[node]:
                 data_node += self.edge_weights[(parent, node)] * data[parent,:]
             data[node,:] = data_node
