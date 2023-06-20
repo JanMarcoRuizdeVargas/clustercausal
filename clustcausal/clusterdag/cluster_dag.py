@@ -1,12 +1,16 @@
 import numpy as np
-import pandas as np
+import pandas as pd
 import networkx as nx
 import causallearn
+import castle
+import pydot
+import logging
 
 from itertools import combinations
-
 from causallearn.graph.GraphClass import CausalGraph
 from causallearn.utils.PCUtils.BackgroundKnowledge import BackgroundKnowledge
+
+logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 
 class CDAG:
     """
@@ -55,19 +59,24 @@ class CDAG:
         BackgroundKnowledge object. 
         """
         # Create the list of node_names needed for CausalGraph
-        self.graph = CausalGraph(no_of_var = len(self.node_names), 
+        self.cg = CausalGraph(no_of_var = len(self.node_names), 
                                                       node_names = self.node_names)
         # Remove edges that are forbidden by the CDAG
-        self.background_knowledge = BackgroundKnowledge()
-        for cluster1, cluster2 in list(combinations(self.clusters.keys(),2)):
-            if (cluster1, cluster2) not in self.cluster_edges:
-                # Remove all edges from nodes in cluster1 to nodes in cluster2
-                for node1, node2 in list(combinations(self.graph.node_map.keys(),2)):
-                    self.background_knowledge.add_forbidden_by_node(node1, node2)
-            if (cluster2, cluster1) not in self.cluster_edges:
-                # Remove all edges from nodes in cluster2 to nodes in cluster1
-                for node2, node1 in zip(self.clusters[cluster2], self.clusters[cluster1]):
-                    self.background_knowledge.add_forbidden_by_node(node2, node1)
+        # self.background_knowledge = BackgroundKnowledge()
+        for edge in self.cg.G.get_graph_edges():
+            # There must be a better way to do this by only adressing the edges needed to be changed
+            node1 = edge.get_node1()
+            node2 = edge.get_node2()
+            cluster1 = self.node_indices[node1.get_name()]
+            cluster2 = self.node_indices[node2.get_name()]
+            if cluster1 != cluster2:
+                if (cluster1, cluster2) not in self.cluster_edges:
+                    self.cg.G.remove_edge(edge)
+                    logging.info(f'removed edge: ({node1.get_name()},{node2.get_name()})')
+                if (cluster1, cluster2) in self.cluster_edges:
+                    self.cg.G.remove_edge(edge)
+                    self.cg.G.add_directed_edge(node1, node2)
+                    logging.info(f'oriented edge: ({node1.get_name()},{node2.get_name()})')
 
     def cdag_from_background_knowledge(self):
         """
