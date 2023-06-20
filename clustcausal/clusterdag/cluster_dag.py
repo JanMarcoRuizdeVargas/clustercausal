@@ -51,6 +51,21 @@ class CDAG:
             for cluster, vertice in self.clusters.items():
                 if node in vertice:
                     self.node_indices[node] = cluster
+        self.cluster_dag = CausalGraph(no_of_var = len(self.clusters),
+                                node_names = list(self.clusters.keys()))
+        for edge in self.cluster_dag.G.get_graph_edges():
+            cluster1 = edge.get_node1()
+            cluster2 = edge.get_node2()
+            cluster1_name = cluster1.get_name()
+            cluster2_name = cluster2.get_name()
+            if cluster1 != cluster2:
+                if (cluster1_name, cluster2_name) not in self.cluster_edges:
+                    self.cluster_dag.G.remove_edge(edge)
+                    logging.info(f'removed edge: ({cluster1.get_name()},{cluster2.get_name()})')
+                if (cluster1_name, cluster2_name) in self.cluster_edges:
+                    self.cluster_dag.G.remove_edge(edge)
+                    self.cluster_dag.G.add_directed_edge(cluster1, cluster2)
+                    logging.info(f'oriented edge: ({cluster1.get_name()},{cluster2.get_name()})')
         
 
     def cdag_to_mpdag(self):
@@ -77,6 +92,24 @@ class CDAG:
                     self.cg.G.remove_edge(edge)
                     self.cg.G.add_directed_edge(node1, node2)
                     logging.info(f'oriented edge: ({node1.get_name()},{node2.get_name()})')
+
+    def draw_cluster_dag(self):
+        """
+        Draws the cluster DAG using causallearn visualization
+        """
+        self.cluster_dag.draw_pydot_graph()
+
+    def get_topological_ordering(self):
+        """
+        Calculates a topological ordering of the CDAG
+        and saves it to self.cdag_topological_sort and 
+        self.cdag_list_of_topological_sort
+        """
+        nx_helper_graph = nx.DiGraph()
+        nx_helper_graph.add_edges_from(self.cluster_edges)
+        self.nx_helper_graph = nx_helper_graph
+        self.cdag_topological_sort = nx.topological_sort(nx_helper_graph)
+        self.cdag_list_of_topological_sort = list(self.cdag_topological_sort)
 
     def cdag_from_background_knowledge(self):
         """
