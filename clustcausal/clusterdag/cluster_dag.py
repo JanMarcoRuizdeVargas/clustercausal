@@ -37,38 +37,39 @@ class CDAG:
         to a list of cluster members. 
         The cluster_edges are stored as a list of tuples.
         An example CDAG:
-            cdag = {}
-            cdag['clusters'] = {'C1':['X1','X2','X3'], 'C2': ['X4','X5']}
-            cdag['cluster_edges'] = [('C1','C2')] 
+            cdag.cluster_mapping= {'C1':['X1','X2','X3'], 'C2': ['X4','X5']}
+            cdag.cluster_edges = [('C1','C2')] 
+            cdag.cg = CausalGraphObject
+            cdag.cluster_graph = CausalGraphObject of clusters
         """
-        self.clusters = cluster_mapping
+        self.cluster_mapping = cluster_mapping
         self.cluster_edges = cluster_edges
         self.node_names = []
-        for cluster in self.clusters:
-            self.node_names.extend(self.clusters[cluster])
+        for cluster in self.cluster_mapping:
+            self.node_names.extend(self.cluster_mapping[cluster])
         self.node_indices = {} # Dictionary that points to which cluster the node is in
         for node in self.node_names:
-            for cluster, vertice in self.clusters.items():
+            for cluster, vertice in self.cluster_mapping.items():
                 if node in vertice:
                     self.node_indices[node] = cluster
-        self.cluster_dag = CausalGraph(no_of_var = len(self.clusters),
-                                node_names = list(self.clusters.keys()))
-        for edge in self.cluster_dag.G.get_graph_edges():
+        self.cluster_graph = CausalGraph(no_of_var = len(self.cluster_mapping),
+                                node_names = list(self.cluster_mapping.keys()))
+        for edge in self.cluster_graph.G.get_graph_edges():
             cluster1 = edge.get_node1()
             cluster2 = edge.get_node2()
             cluster1_name = cluster1.get_name()
             cluster2_name = cluster2.get_name()
             if cluster1 != cluster2:
                 if (cluster1_name, cluster2_name) not in self.cluster_edges:
-                    self.cluster_dag.G.remove_edge(edge)
+                    self.cluster_graph.G.remove_edge(edge)
                     logging.info(f'removed edge: ({cluster1.get_name()},{cluster2.get_name()})')
                 if (cluster1_name, cluster2_name) in self.cluster_edges:
-                    self.cluster_dag.G.remove_edge(edge)
-                    self.cluster_dag.G.add_directed_edge(cluster1, cluster2)
+                    self.cluster_graph.G.remove_edge(edge)
+                    self.cluster_graph.G.add_directed_edge(cluster1, cluster2)
                     logging.info(f'oriented edge: ({cluster1.get_name()},{cluster2.get_name()})')
         
 
-    def cdag_to_mpdag(self):
+    def cdag_to_mpdag(self) -> CausalGraph:
         """
         Constructs a MPDAG from a CDAG and stores it in a causallearn
         BackgroundKnowledge object. 
@@ -92,12 +93,13 @@ class CDAG:
                     self.cg.G.remove_edge(edge)
                     self.cg.G.add_directed_edge(node1, node2)
                     logging.info(f'oriented edge: ({node1.get_name()},{node2.get_name()})')
+        return self.cg
 
-    def draw_cluster_dag(self):
+    def draw_cluster_graph(self):
         """
         Draws the cluster DAG using causallearn visualization
         """
-        self.cluster_dag.draw_pydot_graph()
+        self.cluster_graph.draw_pydot_graph()
 
     def get_topological_ordering(self):
         """
@@ -110,6 +112,7 @@ class CDAG:
         self.nx_helper_graph = nx_helper_graph
         self.cdag_topological_sort = nx.topological_sort(nx_helper_graph)
         self.cdag_list_of_topological_sort = list(self.cdag_topological_sort)
+        return self.cdag_list_of_topological_sort
 
     def cdag_from_background_knowledge(self):
         """

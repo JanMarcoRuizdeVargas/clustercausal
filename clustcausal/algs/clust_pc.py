@@ -12,6 +12,7 @@ import time
 import warnings
 from itertools import combinations, permutations
 from typing import Dict, List, Tuple
+from tqdm.auto import tqdm
 
 from causallearn.graph.GraphClass import CausalGraph
 from causallearn.utils.PCUtils.BackgroundKnowledge import BackgroundKnowledge
@@ -42,6 +43,7 @@ class ClustPC():
         #     data.columns = self.cdag.node_names
 
     def set_parameters(self,
+        cdag: CDAG,
         data: ndarray,
         node_names: List[str] | None,
         alpha: float,
@@ -57,6 +59,7 @@ class ClustPC():
         """
         Set parameters for the clust PC algorithm.
         """
+        self.cdag  = cdag
         self.data = data
         self.node_names = node_names
         self.alpha = alpha
@@ -70,10 +73,14 @@ class ClustPC():
         self.kwargs = kwargs
                        
 
-    def run(self):
+    def run(self) -> CausalGraph:
         for cluster in self.cdag.cdag_list_of_topological_sort:
-            pass
-            
+            self.inter_cluster_phase(cluster)
+            # Apply Meek edge orientation rules
+            self.intra_cluster_phase(cluster)
+            # Apply Meek edge orientation rules
+        # Apply Meek edge orientation rules
+        return self.cdag.cg # Return CausalGraph of the CDAG
 
     def inter_cluster_phase(self, cluster):
         """
@@ -87,5 +94,38 @@ class ClustPC():
     def intra_cluster_phase(self, cluster):
         """
         Runs the intra-cluster phase of the ClustPC algorithm for a given cluster.
+        Adapted from causallearn pc algorithm.
+        Updates self.cdag.cg each step. 
         """
-        pass
+        assert type(self.data) == np.ndarray
+        assert 0 < self.alpha < 1
+        
+        no_of_var = self.data.shape[1]
+        # Check if all variables are in the graph
+        assert len(self.cdag.cg.G.get_nodes) == no_of_var 
+
+        self.cdag.cg.set_ind_test(self.indep_test)
+
+        depth = -1
+        pbar = tqdm(total=no_of_var) if self.show_progress else None
+        # Collect relevant nodes, i.e. cluster and parents of cluster in a list of Node objects
+        relevant_clusters = self.cdag.cluster_graph.G.get_parents(cluster)
+        for i in range(len(relevant_clusters)):
+            relevant_clusters[i] = relevant_clusters[i].get_name()
+        relevant_nodes = []
+        for cluster in relevant_clusters:
+            relevant_nodes.extend(self.cdag.cluster_mapping[cluster])
+        for i in relevant_nodes:
+            relevant_nodes[i] = ClustPC.get_key_by_value(self.cdag.cg.G.node_map, i)
+        
+        # Define the local graph on which to run the intra cluster phase, restrict data
+        local_data = self.data[:,] # TODO have to figure out how to restrict array correctly
+
+    @staticmethod
+    def get_key_by_value(dictionary, value):
+        # Helper function to get Node object from node_map value i regarding GraphNode object
+        for key, val in dictionary.items():
+            if val == value:
+                return key
+        return None  # Value not found in the dictionary
+
