@@ -96,6 +96,7 @@ class ClustPC():
         Runs the intra-cluster phase of the ClustPC algorithm for a given cluster.
         Adapted from causallearn pc algorithm.
         Updates self.cdag.cg each step. 
+        Input: cluster, a node object of CausalGraph
         """
         assert type(self.data) == np.ndarray
         assert 0 < self.alpha < 1
@@ -109,23 +110,21 @@ class ClustPC():
         depth = -1
         pbar = tqdm(total=no_of_var) if self.show_progress else None
         # Collect relevant nodes, i.e. cluster and parents of cluster in a list of Node objects
-        relevant_clusters = self.cdag.cluster_graph.G.get_parents(cluster)
-        for i in range(len(relevant_clusters)):
-            relevant_clusters[i] = relevant_clusters[i].get_name()
-        relevant_nodes = []
-        for cluster in relevant_clusters:
-            relevant_nodes.extend(self.cdag.cluster_mapping[cluster])
-        for i in relevant_nodes:
-            relevant_nodes[i] = ClustPC.get_key_by_value(self.cdag.cg.G.node_map, i)
+
+        relevant_clusters, relevant_nodes = self.cdag.get_parent_plus(cluster)
+
         
         # Define the local graph on which to run the intra cluster phase, restrict data
-        local_data = self.data[:,] # TODO have to figure out how to restrict array correctly
+        local_data = self.data[:,list(relevant_nodes.keys())] 
+        local_graph = self.cdag.cg.G.subgraph(list(relevant_nodes.values()))
 
-    @staticmethod
-    def get_key_by_value(dictionary, value):
-        # Helper function to get Node object from node_map value i regarding GraphNode object
-        for key, val in dictionary.items():
-            if val == value:
-                return key
-        return None  # Value not found in the dictionary
+        # Difference to local pc algorithm is that we consider only edges in the cluster
+        # but as potential separating sets we consider cluster union cluster parents
+
+        while self.cdag.max_degree_of_cluster_nodes_including_parents() - 1 > depth:
+            depth += 1
+
+
+
+
 

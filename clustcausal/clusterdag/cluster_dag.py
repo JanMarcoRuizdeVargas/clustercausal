@@ -113,6 +113,60 @@ class CDAG:
         self.cdag_topological_sort = nx.topological_sort(nx_helper_graph)
         self.cdag_list_of_topological_sort = list(self.cdag_topological_sort)
         return self.cdag_list_of_topological_sort
+    
+    def get_parents_plus(self, cluster):
+        """
+        Gets the pa+ set of a cluster, i.e. the cluster union the parents
+        Parameters:
+        cluster (Node object in the CausalGraph instance cdag.cluster_graph
+        Returns: 
+        Tuple of
+        TODO
+        """
+        relevant_clusters = [cluster]
+        relevant_clusters.extend(self.cdag.cluster_graph.G.get_parents(cluster))
+        for clust in relevant_clusters:
+            relevant_clusters[i] = relevant_clusters[i].get_name()
+        relevant_nodes_id = cluster.get_name()
+        for clust in relevant_clusters:
+            relevant_nodes_id.extend(self.cdag.cluster_mapping[clust])
+        # Put relevant nodes in a dictionary with id as key and Node object as value
+        # self.cdag.cg.G.node_map is the inverse, i.e. with all Node objects as keys 
+        # and id as value
+        relevant_nodes = {}
+        for i in relevant_nodes_id:
+            relevant_nodes[i] = ClustPC.get_key_by_value(self.cdag.cg.G.node_map, i)
+    
+    def get_local_graph(self, cluster):
+        """
+        Define the local graph on which to run the intra cluster phase, restrict data
+        to cluster union parents of cluster
+        Parameters:
+        cluster (Node object in the CausalGraph instance cdag.cluster_graph
+        Returns:
+        A GeneralGraph object, restricted to the relevant nodes (cluster union parents)
+        TODO
+        """
+                
+        local_data = self.data[:,list(relevant_nodes.keys())] 
+        local_graph = self.cdag.cg.G.subgraph(list(relevant_nodes.values()))
+    
+    def max_degree_of_cluster_nodes_including_parents(self, cluster):
+        """
+        Returns the maximum degree of the nodes in the cluster in the
+        local graph, which includes parents of the cluster.
+        Needed for stopping depth of PC algorithm. 
+        TODO
+        """
+        cluster_nodes = self.cluster_mapping[cluster]
+
+    @staticmethod
+    def get_key_by_value(dictionary, value):
+        # Helper function to get Node object from node_map value i regarding GraphNode object
+        for key, val in dictionary.items():
+            if val == value:
+                return key
+        return None  # Value not found in the dictionary
 
     def cdag_from_background_knowledge(self):
         """
