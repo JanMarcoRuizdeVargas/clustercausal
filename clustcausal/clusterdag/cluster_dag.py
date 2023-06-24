@@ -213,8 +213,9 @@ class CDAG:
         Integer, maximum amount of nonchilds of any node in the cluster
         """
         max_degree = -1
-        nodes_in_cluster = self.cluster_mapping[cluster]
-        for node in nodes_in_cluster:
+        nodes_in_cluster = self.cluster_mapping[cluster.get_name()]
+        for node_name in nodes_in_cluster:
+            node = self.get_node_by_name(node_name, graph_to_use)
             deg = graph_to_use.G.get_degree(node)
             if deg > max_degree:
                 max_degree = deg

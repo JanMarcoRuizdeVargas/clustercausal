@@ -21,7 +21,7 @@ from causallearn.utils.cit import *
 from causallearn.utils.PCUtils import Helper, Meek, SkeletonDiscovery, UCSepset
 from causallearn.utils.PCUtils.BackgroundKnowledgeOrientUtils import \
     orient_by_background_knowledge
-from causallearn.search.ConstraintBased import pc, pc_alg
+from causallearn.search.ConstraintBased.PC import pc, pc_alg
 
 from clustcausal.clusterdag.cluster_dag import CDAG
 
@@ -33,25 +33,25 @@ class ClustPC():
     Adapted from causallearn pc algorithm. 
     
     """
-    def __init__(self, cdag : CDAG):#, data: ndarray):
-        self.cdag = cdag
-        self.cdag.cdag_to_mpdag() # Get pruned MPDAG from CDAG
-        self.cdag.get_topological_ordering()  # Get topological ordering of CDAG
-        # self.data = data
-        # if data is not pd.DataFrame:
-        #     logging.info('Data converted into pandas dataframe with columns X1, X2, ...')
-        #     data = pd.DataFrame(data)
-        #     data.columns = self.cdag.node_names
+    # def __init__(self, cdag : CDAG):#, data: ndarray):
+    #     self.cdag = cdag
+    #     self.cdag.cdag_to_mpdag() # Get pruned MPDAG from CDAG
+    #     self.cdag.get_topological_ordering()  # Get topological ordering of CDAG
+    #     # self.data = data
+    #     # if data is not pd.DataFrame:
+    #     #     logging.info('Data converted into pandas dataframe with columns X1, X2, ...')
+    #     #     data = pd.DataFrame(data)
+    #     #     data.columns = self.cdag.node_names
 
-    def set_parameters(self,
+    def __init__(self,
         cdag: CDAG,
         data: ndarray,
-        node_names: List[str] | None,
+        # node_names: List[str] | None,
         alpha: float,
-        indep_test: str,
-        stable: bool,
-        uc_rule: int,
-        uc_priority: int,
+        indep_test: str = 'fisherz',
+        stable: bool = True,
+        uc_rule: int = 0,
+        uc_priority: int = 2,
         background_knowledge: BackgroundKnowledge | None = None,
         verbose: bool = False,
         show_progress: bool = True,
@@ -62,9 +62,9 @@ class ClustPC():
         """
         self.cdag  = cdag
         self.data = data
-        self.node_names = node_names
+        self.node_names = cdag.node_names
         self.alpha = alpha
-        self.indep_test = indep_test
+
         self.stable = stable
         self.uc_rule = uc_rule
         self.uc_priority = uc_priority
@@ -72,6 +72,12 @@ class ClustPC():
         self.verbose = verbose
         self.show_progress = show_progress
         self.kwargs = kwargs
+        self.cdag.cdag_to_mpdag() # Get pruned MPDAG from CDAG
+        self.cdag.get_cluster_topological_ordering()  # Get topological ordering of CDAG
+
+        # self.indep_test = indep_test
+        self.cdag.cg.set_ind_test(indep_test)
+        print('indep_test: ', self.cdag.cg.test)
                        
 
     def run(self) -> CausalGraph:
@@ -104,9 +110,9 @@ class ClustPC():
         
         no_of_var = self.data.shape[1]
         # Check if all variables are in the graph
-        assert len(self.cdag.cg.G.get_nodes) == no_of_var 
+        assert len(self.cdag.node_names) == no_of_var 
 
-        self.cdag.cg.set_ind_test(self.indep_test)
+        # self.cdag.cg.set_ind_test(self.indep_test)
 
         depth = -1
         pbar = tqdm(total=no_of_var) if self.show_progress else None
@@ -115,7 +121,7 @@ class ClustPC():
         # relevant_clusters, relevant_nodes = self.cdag.get_parent_plus(cluster)
 
         # Define the subgraph induced by the cluster nodes
-        nodes_names_in_cluster = self.cdag.cluster_mapping[cluster]
+        nodes_names_in_cluster = self.cdag.cluster_mapping[cluster.get_name()]
         nodes_in_cluster = self.cdag.get_list_of_nodes_by_name(list_of_node_names= \
                                                                nodes_names_in_cluster, \
                                                                 cg = self.cdag.cg)
