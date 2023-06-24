@@ -48,7 +48,8 @@ class ClustPC():
         data: ndarray,
         # node_names: List[str] | None,
         alpha: float,
-        indep_test: str = 'fisherz',
+        indep_test_name: str = 'fisherz',
+        cit = CIT, 
         stable: bool = True,
         uc_rule: int = 0,
         uc_priority: int = 2,
@@ -76,8 +77,8 @@ class ClustPC():
         self.cdag.get_cluster_topological_ordering()  # Get topological ordering of CDAG
 
         # self.indep_test = indep_test
-        self.cdag.cg.set_ind_test(indep_test)
-        print('indep_test: ', self.cdag.cg.test)
+        self.cdag.cg.set_ind_test(cit)
+        print('indep_test: ', type(self.cdag.cg.test), self.cdag.cg.test)
                        
 
     def run(self) -> CausalGraph:
