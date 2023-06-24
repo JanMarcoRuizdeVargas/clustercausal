@@ -16,6 +16,7 @@ from tqdm.auto import tqdm
 
 from causallearn.graph.GraphClass import CausalGraph
 from causallearn.utils.PCUtils.BackgroundKnowledge import BackgroundKnowledge
+from causallearn.utils.PCUtils.Helper import append_value
 from causallearn.utils.cit import *
 from causallearn.utils.PCUtils import Helper, Meek, SkeletonDiscovery, UCSepset
 from causallearn.utils.PCUtils.BackgroundKnowledgeOrientUtils import \
@@ -111,10 +112,25 @@ class ClustPC():
         pbar = tqdm(total=no_of_var) if self.show_progress else None
 
         # Collect relevant nodes, i.e. cluster and parents of cluster in a list of Node objects
-        relevant_clusters, relevant_nodes = self.cdag.get_parent_plus(cluster)
+        # relevant_clusters, relevant_nodes = self.cdag.get_parent_plus(cluster)
 
-        # Define the local graph on which to run the intra cluster phase, restrict data
+        # Define the subgraph induced by the cluster nodes
+        nodes_names_in_cluster = self.cdag.cluster_mapping[cluster]
+        nodes_in_cluster = self.cdag.get_list_of_nodes_by_name(list_of_node_names= \
+                                                               nodes_names_in_cluster, \
+                                                                cg = self.cdag.cg)
+        subgraph_cluster = CausalGraph(len(nodes_names_in_cluster), nodes_names_in_cluster)
+        subgraph_cluster.G = self.cdag.subgraph(nodes_in_cluster)
+
+        # Define the local graph which contains possible separating sets
         local_graph = self.cdag.get_local_graph(cluster)
+
+        # Possibly replace subgraph_cluster and local_graph by index_arrays, 
+        # as have to operate on entire adjacency matrix and data matrix
+        cluster_node_indices = np.array([self.cdag.cg.G.node_map[node] \
+                                    for node in subgraph_cluster.G.nodes])
+        local_graph_node_indices = np.array([self.cdag.cg.G.node_map[node] \
+                                        for node in local_graph.G.nodes])
 
         # Difference to local pc algorithm is that we consider only edges in the cluster
         # but as potential separating sets we consider cluster union cluster parents
@@ -127,9 +143,74 @@ class ClustPC():
             edge_removal = []
             if self.show_progress:
                 pbar.reset()
-                # I can push from colab!
-                # Second test
-                # Check this out from home console!
+            for x in cluster_node_indices:
+                if self.show_progress:
+                    pbar.update()
+                if self.show_progress:
+                    pbar.set_description(f'Depth={depth}, working on node {x}')
+                # Get all neighbors of node_x in the cluster, is integer values in adjacency matrix
+                # x = subgraph_cluster.G.node_map[node_x] # x is index of node_x
+                Neigh_x = self.cdag.cg.neighbors(x)
+                # Remove neighbors that are not in cluster
+                Neigh_x_in_clust = np.delete(Neigh_x, np.where(\
+                    Neigh_x not in cluster_node_indices))
+                possible_blocking_nodes = np.array(local_graph_node_indices)
+                possible_blocking_nodes = np.delete(possible_blocking_nodes, \
+                                                    np.where(possible_blocking_nodes == x))
+                if len(Neigh_x) < depth - 1:
+                    continue
+                for y in Neigh_x:
+                    # No other background functionality supported for now
+                    # No parent checking for mns separation supported for now TODO
+                    sepsets = set()
+                    Neigh_x_no_y = np.delete(possible_blocking_nodes, \
+                                             np.where(possible_blocking_nodes == y))
+                    for S in combinations(Neigh_x_no_y, depth):
+                        p = self.cdag.cg.ci_test(x, y, S)
+                        if p > self.alpha:
+                            if self.verbose:
+                                print('%d ind %d | %s with p-value %f\n' % (x, y, S, p))
+                            if not self.stable:
+                                edge1 = self.cdag.cg.G.get_edge(self.cdag.cg.G.nodes[x], \
+                                                                self.cdag.cg.G.nodes[y])
+                                if edge1 is not None:
+                                    self.cdag.cg.G.remove_edge(edge1)
+                                edge2 = self.cdag.cg.G.get_edge(self.cdag.cg.G.nodes[y], \
+                                                                self.cdag.cg.G.nodes[x])
+                                if edge2 is not None:
+                                    self.cdag.cg.G.remove_edge(edge2)
+                                append_value(self.cdag.cg.sepset, x, y, S)
+                                append_value(self.cdag.cg.sepset, y, x, S)
+                                break
+                            else:
+                                edge_removal.append((x, y))  # after all conditioning sets at
+                                edge_removal.append((y, x))  # depth l have been considered
+                                for s in S:
+                                    sepsets.add(s)
+                        else:
+                            if self.verbose:
+                                print('%d dep %d | %s with p-value %f\n' % (x, y, S, p))
+                    append_value(self.cdag.cg.sepset, x, y, tuple(sepsets))
+                    append_value(self.cdag.cg.sepset, y, x, tuple(sepsets))
+            if self.show_progress:
+                pbar.refresh()
+
+            for (x, y) in list(set(edge_removal)):
+                edge1 = self.cdag.cg.G.get_edge(self.cdag.cg.G.nodes[x], \
+                                                self.cdag.cg.G.nodes[y])
+                if edge1 is not None:
+                    self.cdag.cg.G.remove_edge(edge1)
+
+        if self.show_progress:
+            pbar.close()
+
+        # TODO Orientation rules
+        return self.cdag.cg
+
+
+
+
+
             
 
 
