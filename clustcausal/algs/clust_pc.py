@@ -129,6 +129,7 @@ class ClustPC():
                 pbar.reset()
                 # I can push from colab!
                 # Second test
+                # Check this out from home console!
             
 
 
