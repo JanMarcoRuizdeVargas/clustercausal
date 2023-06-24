@@ -127,6 +127,7 @@ class ClustPC():
             edge_removal = []
             if self.show_progress:
                 pbar.reset()
+                # I can push from colab!
             
 
 
