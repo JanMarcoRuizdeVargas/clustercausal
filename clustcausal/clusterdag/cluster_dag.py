@@ -7,8 +7,12 @@ import pydot
 import logging
 
 from itertools import combinations
+from typing import List
 from causallearn.graph.GraphClass import CausalGraph
 from causallearn.utils.PCUtils.BackgroundKnowledge import BackgroundKnowledge
+from causallearn.graph.GraphNode import GraphNode
+from causallearn.graph.Node import Node
+from causallearn.graph.GeneralGraph import GeneralGraph
 
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 
@@ -157,10 +161,45 @@ class CDAG:
         relevant_node_names = []
         for node in relevant_nodes:
             relevant_node_names.append(node.get_name())
+
+        local_graph = CausalGraph(no_of_var = len(relevant_nodes), \
+                                                        node_names = relevant_node_names)
+        
         # local_graph = CausalGraph(no_of_var = len(relevant_nodes), 
         #                                               node_names = relevant_node_names)
-        local_graph = self.cg.G.subgraph(relevant_nodes)
+        local_graph.G = self.subgraph(relevant_nodes)
         return local_graph
+    
+    def subgraph(self, nodes: List[Node]):
+        """
+        Returns a subgraph, where the nodes are the ones in the list nodes
+        Adapted from causallearn.graph.GeneralGraph.subgraph, but theirs was bugged
+        Parameters:
+        nodes (list of Node objects)
+        Returns:
+        A GeneralGraph with GeneralGraph.graph a
+        ndarray of shape (len(nodes), len(nodes)), the adjacency matrix of the subgraph
+        """
+        # Put nodes into self.cg.G.node_map order
+        nodes = sorted(nodes, key = lambda node: self.cg.G.node_map[node])
+
+        subgraph = GeneralGraph(nodes)
+
+        graph = self.cg.G.graph
+
+        nodes_to_delete = []
+
+        for i in range(self.cg.G.num_vars):
+            if not (self.cg.G.nodes[i] in nodes):
+                nodes_to_delete.append(i)
+
+        graph = np.delete(graph, nodes_to_delete, axis = 0)
+        graph = np.delete(graph, nodes_to_delete, axis = 1)
+
+        subgraph.graph = graph
+        subgraph.reconstitute_dpath(subgraph.get_graph_edges())
+
+        return subgraph
     
     def max_nonchilds_of_cluster_nodes(self, cluster, graph_to_use: CausalGraph):
         """
@@ -182,6 +221,16 @@ class CDAG:
         return max_degree
     
     @staticmethod
+    def get_node_names_from_list(list_of_nodes):
+        """
+        Helper function to get node names from list of Node objects
+        """
+        node_names = []
+        for node in list_of_nodes:
+            node_names.append(node.get_name())
+        return node_names
+
+    @staticmethod
     def get_node_by_name(node_name, cg: CausalGraph):
         """
         Helper function to get Node object from node_name regarding GraphNode object
@@ -198,6 +247,7 @@ class CDAG:
             if val == value:
                 return key
         return None  # Value not found in the dictionary
+    
 
     def cdag_from_background_knowledge(self):
         """
