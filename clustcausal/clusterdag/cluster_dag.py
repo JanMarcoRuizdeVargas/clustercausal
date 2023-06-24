@@ -221,24 +221,44 @@ class CDAG:
         return max_degree
     
     @staticmethod
+    def get_node_by_name(node_name, cg: CausalGraph):
+        """
+        Helper function to get Node object from node_name regarding GraphNode object
+        Parameters:
+        node_name (string)
+        cg (CausalGraph object) - the graph to look in
+        Returns:
+        Node object
+        """
+        for node in cg.G.nodes:
+            if node.get_name() == node_name:
+                return node
+            
+    @staticmethod
+    def get_list_of_nodes_by_name(list_of_node_names, cg: CausalGraph):
+        """
+        Helper function to get list of Node objects from list of node_names 
+        regarding GraphNode object
+        Parameters:
+        list_of_node_names (list of strings)
+        cg (CausalGraph object) - the graph to look in
+        Returns:
+        list of Node objects
+        """
+        list_of_nodes = []
+        for node_name in list_of_node_names:
+            list_of_nodes.append(CDAG.get_node_by_name(node_name, cg))
+        return list_of_nodes
+    
+    @staticmethod
     def get_node_names_from_list(list_of_nodes):
         """
-        Helper function to get node names from list of Node objects
+        Helper function to get list node names from list of Node objects
         """
         node_names = []
         for node in list_of_nodes:
             node_names.append(node.get_name())
         return node_names
-
-    @staticmethod
-    def get_node_by_name(node_name, cg: CausalGraph):
-        """
-        Helper function to get Node object from node_name regarding GraphNode object
-        """
-        for node in cg.G.nodes:
-            if node.get_name() == node_name:
-                return node
-
 
     @staticmethod
     def get_key_by_value(dictionary, value):
