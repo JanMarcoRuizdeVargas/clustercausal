@@ -109,20 +109,26 @@ class ClustPC():
 
         depth = -1
         pbar = tqdm(total=no_of_var) if self.show_progress else None
-        # Collect relevant nodes, i.e. cluster and parents of cluster in a list of Node objects
 
+        # Collect relevant nodes, i.e. cluster and parents of cluster in a list of Node objects
         relevant_clusters, relevant_nodes = self.cdag.get_parent_plus(cluster)
 
-        
         # Define the local graph on which to run the intra cluster phase, restrict data
-        local_data = self.data[:,list(relevant_nodes.keys())] 
-        local_graph = self.cdag.cg.G.subgraph(list(relevant_nodes.values()))
+        local_graph = self.cdag.get_local_graph(cluster)
 
         # Difference to local pc algorithm is that we consider only edges in the cluster
         # but as potential separating sets we consider cluster union cluster parents
+        # Therefore stopping criterion is when separating set cardinality
+        # exceed nonchilds in cluster
 
-        while self.cdag.max_degree_of_cluster_nodes_including_parents() - 1 > depth:
+        # Skeleton discovery
+        while self.cdag.max_nonchilds_of_cluster_nodes(cluster, local_graph) - 1 > depth:
             depth += 1
+            edge_removal = []
+            if self.show_progress:
+                pbar.reset()
+            
+
 
 
 

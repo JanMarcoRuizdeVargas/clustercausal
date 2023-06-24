@@ -95,48 +95,54 @@ class CDAG:
                     logging.info(f'oriented edge: ({node1.get_name()},{node2.get_name()})')
         return self.cg
 
+    def draw_mpdag(self):
+        """
+        Draws the mpdag using causallearn visualization
+        """
+        self.cg.draw_pydot_graph()
+
     def draw_cluster_graph(self):
         """
         Draws the cluster DAG using causallearn visualization
         """
         self.cluster_graph.draw_pydot_graph()
 
-    def get_topological_ordering(self):
+    def get_cluster_topological_ordering(self) -> list:
         """
         Calculates a topological ordering of the CDAG
         and saves it to self.cdag_topological_sort and 
         self.cdag_list_of_topological_sort
+        Returns: 
+        list of node names
         """
         nx_helper_graph = nx.DiGraph()
         nx_helper_graph.add_edges_from(self.cluster_edges)
-        self.nx_helper_graph = nx_helper_graph
         self.cdag_topological_sort = nx.topological_sort(nx_helper_graph)
         self.cdag_list_of_topological_sort = list(self.cdag_topological_sort)
         return self.cdag_list_of_topological_sort
     
+
     def get_parents_plus(self, cluster):
         """
         Gets the pa+ set of a cluster, i.e. the cluster union the parents
         Parameters:
         cluster (Node object in the CausalGraph instance cdag.cluster_graph
         Returns: 
-        Tuple of
-        TODO
+        Tuple of two lists: (relevant_clusters, relevant_nodes)
+        relevant_clusters is list of Node objects in cdag.cluster_graph
+        relevant_nodes is list of Node objects in cdag.cg
         """
         relevant_clusters = [cluster]
-        relevant_clusters.extend(self.cdag.cluster_graph.G.get_parents(cluster))
+        relevant_clusters.extend(self.cluster_graph.G.get_parents(cluster))
+        cluster_name = cluster.get_name()
+        names_of_relevant_nodes = []
         for clust in relevant_clusters:
-            relevant_clusters[i] = relevant_clusters[i].get_name()
-        relevant_nodes_id = cluster.get_name()
-        for clust in relevant_clusters:
-            relevant_nodes_id.extend(self.cdag.cluster_mapping[clust])
-        # Put relevant nodes in a dictionary with id as key and Node object as value
-        # self.cdag.cg.G.node_map is the inverse, i.e. with all Node objects as keys 
-        # and id as value
-        relevant_nodes = {}
-        for i in relevant_nodes_id:
-            relevant_nodes[i] = ClustPC.get_key_by_value(self.cdag.cg.G.node_map, i)
-    
+            names_of_relevant_nodes.extend(self.cluster_mapping[clust.get_name()])
+        relevant_nodes = []
+        for node_name in names_of_relevant_nodes:
+            relevant_nodes.append(self.get_node_by_name(node_name, self.cg))
+        return relevant_clusters, relevant_nodes
+
     def get_local_graph(self, cluster):
         """
         Define the local graph on which to run the intra cluster phase, restrict data
@@ -144,21 +150,46 @@ class CDAG:
         Parameters:
         cluster (Node object in the CausalGraph instance cdag.cluster_graph
         Returns:
-        A GeneralGraph object, restricted to the relevant nodes (cluster union parents)
-        TODO
+        A CausalGraph object, where I replaced CausalGraph.G with a subgraph
+        (GeneralGraph) object, restricted to the relevant nodes (cluster union parents)
         """
-                
-        local_data = self.data[:,list(relevant_nodes.keys())] 
-        local_graph = self.cdag.cg.G.subgraph(list(relevant_nodes.values()))
+        _ , relevant_nodes = self.get_parents_plus(cluster)
+        relevant_node_names = []
+        for node in relevant_nodes:
+            relevant_node_names.append(node.get_name())
+        # local_graph = CausalGraph(no_of_var = len(relevant_nodes), 
+        #                                               node_names = relevant_node_names)
+        local_graph = self.cg.G.subgraph(relevant_nodes)
+        return local_graph
     
-    def max_degree_of_cluster_nodes_including_parents(self, cluster):
+    def max_nonchilds_of_cluster_nodes(self, cluster, graph_to_use: CausalGraph):
         """
         Returns the maximum degree of the nodes in the cluster in the
         local graph, which includes parents of the cluster.
         Needed for stopping depth of PC algorithm. 
-        TODO
+        Parameters:
+        cluster (Node object in the CausalGraph instance cdag.cluster_graph)
+        graph_to_use (CausalGraph object)
+        Returns:
+        Integer, maximum amount of nonchilds of any node in the cluster
         """
-        cluster_nodes = self.cluster_mapping[cluster]
+        max_degree = -1
+        nodes_in_cluster = self.cluster_mapping[cluster]
+        for node in nodes_in_cluster:
+            deg = graph_to_use.G.get_degree(node)
+            if deg > max_degree:
+                max_degree = deg
+        return max_degree
+    
+    @staticmethod
+    def get_node_by_name(node_name, cg: CausalGraph):
+        """
+        Helper function to get Node object from node_name regarding GraphNode object
+        """
+        for node in cg.G.nodes:
+            if node.get_name() == node_name:
+                return node
+
 
     @staticmethod
     def get_key_by_value(dictionary, value):
