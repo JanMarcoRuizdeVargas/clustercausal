@@ -77,8 +77,9 @@ class ClustPC():
         self.cdag.get_cluster_topological_ordering()  # Get topological ordering of CDAG
 
         # self.indep_test = indep_test
-        self.cdag.cg.set_ind_test(cit)
-        print('indep_test: ', type(self.cdag.cg.test), self.cdag.cg.test)
+        # self.cdag.cg.set_ind_test(cit)
+        # print('indep_test: ', type(self.cdag.cg.test), self.cdag.cg.test)
+        print('HIIIIIIIIIIIII')
                        
 
     def run(self) -> CausalGraph:
