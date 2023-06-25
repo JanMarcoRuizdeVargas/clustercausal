@@ -48,8 +48,7 @@ class ClustPC():
         data: ndarray,
         # node_names: List[str] | None,
         alpha: float,
-        indep_test_name: str = 'fisherz',
-        cit = CIT, 
+        indep_test: str = 'fisherz',
         stable: bool = True,
         uc_rule: int = 0,
         uc_priority: int = 2,
@@ -76,10 +75,11 @@ class ClustPC():
         self.cdag.cdag_to_mpdag() # Get pruned MPDAG from CDAG
         self.cdag.get_cluster_topological_ordering()  # Get topological ordering of CDAG
 
+        # Set independence test
+        self.cdag.cg.test = CIT(self.data, indep_test, **kwargs)
         # self.indep_test = indep_test
         # self.cdag.cg.set_ind_test(cit)
         # print('indep_test: ', type(self.cdag.cg.test), self.cdag.cg.test)
-        print('HIIIIIIIIIIIII')
                        
 
     def run(self) -> CausalGraph:
@@ -137,8 +137,10 @@ class ClustPC():
         # as have to operate on entire adjacency matrix and data matrix
         cluster_node_indices = np.array([self.cdag.cg.G.node_map[node] \
                                     for node in subgraph_cluster.G.nodes])
+        print(f'Cluster node indices are {cluster_node_indices}')
         local_graph_node_indices = np.array([self.cdag.cg.G.node_map[node] \
                                         for node in local_graph.G.nodes])
+        print(f'Local graph node indices are {cluster_node_indices}')
 
         # Difference to local pc algorithm is that we consider only edges in the cluster
         # but as potential separating sets we consider cluster union cluster parents
@@ -159,15 +161,21 @@ class ClustPC():
                 # Get all neighbors of node_x in the cluster, is integer values in adjacency matrix
                 # x = subgraph_cluster.G.node_map[node_x] # x is index of node_x
                 Neigh_x = self.cdag.cg.neighbors(x)
+                print(f'Neigh_x is {Neigh_x}')
                 # Remove neighbors that are not in cluster
-                Neigh_x_in_clust = np.delete(Neigh_x, np.where(\
-                    Neigh_x not in cluster_node_indices))
+                mask = np.isin(Neigh_x, cluster_node_indices)
+                Neigh_x_in_clust = Neigh_x[mask]
+                # Neigh_x_in_clust = np.delete(Neigh_x, np.where(\
+                #     Neigh_x not in cluster_node_indices))
+                print(f'Neig_x_in_Clust is {Neigh_x_in_clust}')
                 possible_blocking_nodes = np.array(local_graph_node_indices)
                 possible_blocking_nodes = np.delete(possible_blocking_nodes, \
                                                     np.where(possible_blocking_nodes == x))
                 if len(Neigh_x) < depth - 1:
                     continue
-                for y in Neigh_x:
+                for y in Neigh_x_in_clust:
+                    if self.verbose:
+                        print('Testing edges from %d to %d' %(x, y))
                     # No other background functionality supported for now
                     # No parent checking for mns separation supported for now TODO
                     sepsets = set()
@@ -208,6 +216,7 @@ class ClustPC():
                                                 self.cdag.cg.G.nodes[y])
                 if edge1 is not None:
                     self.cdag.cg.G.remove_edge(edge1)
+                    print(f'Deleted edge from {x} to {y}')
 
         if self.show_progress:
             pbar.close()
