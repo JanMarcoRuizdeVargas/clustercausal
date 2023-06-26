@@ -72,18 +72,24 @@ class ClustPC():
         '''
         Runs the C-PC algorithm. 
         '''
+        # no_of_var = self.data.shape[1]
+        # pbar = tqdm(total=no_of_var) if self.show_progress else None
         for cluster_name in self.cdag.cdag_list_of_topological_sort:
-            if self.verbose: print(f'Beginning work on {cluster_name}')
+            print(f'\nBeginning work on cluster {cluster_name}')
             cluster = self.cdag.get_node_by_name(cluster_name, cg = self.cdag.cluster_graph)
             for parent in self.cdag.cluster_graph.G.get_parents(cluster):
-              if self.verbose: print(f'Inter phase between low cluster {cluster.get_name()} \
-              and parent {parent.get_name()}')
+              print(f'\nInter phase between low cluster {cluster.get_name()} and parent {parent.get_name()}')
               self.inter_cluster_phase(cluster, parent)
             # TODO Apply Meek edge orientation rules
-            if self.verbose: print(f'Intra phase in cluster {cluster.get_name()}')
+            print(f'\nIntra phase in cluster {cluster.get_name()}')
             self.intra_cluster_phase(cluster)
             # TODO Apply Meek edge orientation rules
+        # if self.show_progress:
+        #   pbar.close()
+        
         # TODO Meek edge orientation rules
+
+
         return self.cdag.cg # Return CausalGraph of the CDAG
 
     def inter_cluster_phase(self, low_cluster, high_cluster):
@@ -101,7 +107,6 @@ class ClustPC():
         # self.cdag.cg.set_ind_test(self.indep_test)
 
         depth = -1
-        pbar = tqdm(total=no_of_var) if self.show_progress else None
 
         # Define the subgraph induced by the cluster nodes
         nodes_names_in_low_cluster = self.cdag.cluster_mapping[low_cluster.get_name()]
@@ -126,10 +131,13 @@ class ClustPC():
         # the entire adjacency matrix self.cdag.cg.G.graph
         cluster_node_indices = np.array([self.cdag.cg.G.node_map[node] \
                                     for node in subgraph_cluster.G.nodes])
-        print(f'Cluster node indices are {cluster_node_indices}')
+        if self.verbose: print(f'Cluster node indices are {cluster_node_indices}')
         local_graph_node_indices = np.array([self.cdag.cg.G.node_map[node] \
                                         for node in local_graph.G.nodes])
-        print(f'Local graph node indices are {cluster_node_indices}')
+        if self.verbose: print(f'Local graph node indices are {cluster_node_indices}')
+
+        pbar = tqdm(total=cluster_node_indices.shape[0]) if self.show_progress else None
+        # pbar = pbar
 
         # Difference to local pc algorithm is that we consider only edges in the cluster
         # but as potential separating sets we consider cluster union cluster parents
@@ -147,25 +155,24 @@ class ClustPC():
                     pbar.update()
                 if self.show_progress:
                     pbar.set_description(f'Depth={depth}, working on node {x}')
-                # Get all neighbors of node_x in the cluster, is integer values in adjacency matrix
-                # x = subgraph_cluster.G.node_map[node_x] # x is index of node_x
+                # Get all neighbors of node_x in the cluster, format is integer values 
+                # in adjacency matrix
                 Neigh_x = self.cdag.cg.neighbors(x)
-                print(f'Neigh_x is {Neigh_x}')
+                # if self.verbose: print(f'Neighbors of {x} is {Neigh_x}')
                 # Remove neighbors that are not in cluster
                 mask = np.isin(Neigh_x, cluster_node_indices)
                 Neigh_x_in_clust = Neigh_x[mask]
-                # Neigh_x_in_clust = np.delete(Neigh_x, np.where(\
-                #     Neigh_x not in cluster_node_indices))
-                print(f'Neig_x_in_Clust is {Neigh_x_in_clust}')
+                if self.verbose: 
+                  print(f'Neighbors of {x} in ({low_cluster.get_name()},{high_cluster.get_name()}) are {Neigh_x_in_clust}')
                 possible_blocking_nodes = np.array(local_graph_node_indices)
                 possible_blocking_nodes = np.delete(possible_blocking_nodes, \
                                                     np.where(possible_blocking_nodes == x))
-                if len(Neigh_x) < depth - 1:
+                if len(possible_blocking_nodes) < depth - 1:
                     continue
                 for y in Neigh_x_in_clust:
                     if self.verbose:
                         print('Testing edges from %d to %d' %(x, y))
-                    # No other background functionality supported for now
+                    # No other background knowledge functionality supported for now
                     # No parent checking for mns separation supported for now TODO
                     sepsets = set()
                     Neigh_x_no_y = np.delete(possible_blocking_nodes, \
@@ -174,7 +181,7 @@ class ClustPC():
                         p = self.cdag.cg.ci_test(x, y, S)
                         if p > self.alpha:
                             if self.verbose:
-                                print('%d ind %d | %s with p-value %f\n' % (x, y, S, p))
+                                print('%d ind %d | %s with p-value %f' % (x, y, S, p))
                             if not self.stable:
                                 edge1 = self.cdag.cg.G.get_edge(self.cdag.cg.G.nodes[x], \
                                                                 self.cdag.cg.G.nodes[y])
@@ -194,7 +201,7 @@ class ClustPC():
                                     sepsets.add(s)
                         else:
                             if self.verbose:
-                                print('%d dep %d | %s with p-value %f\n' % (x, y, S, p))
+                                print('%d dep %d | %s with p-value %f' % (x, y, S, p))
                     append_value(self.cdag.cg.sepset, x, y, tuple(sepsets))
                     append_value(self.cdag.cg.sepset, y, x, tuple(sepsets))
             if self.show_progress:
@@ -205,7 +212,9 @@ class ClustPC():
                                                 self.cdag.cg.G.nodes[y])
                 if edge1 is not None:
                     self.cdag.cg.G.remove_edge(edge1)
-                    print(f'Deleted edge from {x} to {y}')
+                    x_name = self.cdag.get_key_by_value(self.cdag.cg.G.node_map, x)
+                    y_name = self.cdag.get_key_by_value(self.cdag.cg.G.node_map, y)
+                    print(f'Deleted edge from {x_name} to {y_name}')
 
         if self.show_progress:
             pbar.close()
@@ -230,10 +239,8 @@ class ClustPC():
         # self.cdag.cg.set_ind_test(self.indep_test)
 
         depth = -1
-        pbar = tqdm(total=no_of_var) if self.show_progress else None
 
         # Collect relevant nodes, i.e. cluster and parents of cluster in a list of Node objects
-        # relevant_clusters, relevant_nodes = self.cdag.get_parent_plus(cluster)
 
         # Define the subgraph induced by the cluster nodes
         nodes_names_in_cluster = self.cdag.cluster_mapping[cluster.get_name()]
@@ -250,10 +257,13 @@ class ClustPC():
         # as have to operate on entire adjacency matrix and data matrix
         cluster_node_indices = np.array([self.cdag.cg.G.node_map[node] \
                                     for node in subgraph_cluster.G.nodes])
-        print(f'Cluster node indices are {cluster_node_indices}')
+        if self.verbose: print(f'Cluster node indices are {cluster_node_indices}')
         local_graph_node_indices = np.array([self.cdag.cg.G.node_map[node] \
                                         for node in local_graph.G.nodes])
-        print(f'Local graph node indices are {cluster_node_indices}')
+        if self.verbose: print(f'Local graph node indices are {cluster_node_indices}')
+
+        pbar = tqdm(total=cluster_node_indices.shape[0]) if self.show_progress else None
+        # pbar = pbar
 
         # Difference to local pc algorithm is that we consider only edges in the cluster
         # but as potential separating sets we consider cluster union cluster parents
@@ -272,15 +282,13 @@ class ClustPC():
                 if self.show_progress:
                     pbar.set_description(f'Depth={depth}, working on node {x}')
                 # Get all neighbors of node_x in the cluster, is integer values in adjacency matrix
-                # x = subgraph_cluster.G.node_map[node_x] # x is index of node_x
                 Neigh_x = self.cdag.cg.neighbors(x)
-                print(f'Neigh_x is {Neigh_x}')
+                # if self.verbose: print(f'Neigh_x is {Neigh_x}')
                 # Remove neighbors that are not in cluster
                 mask = np.isin(Neigh_x, cluster_node_indices)
                 Neigh_x_in_clust = Neigh_x[mask]
-                # Neigh_x_in_clust = np.delete(Neigh_x, np.where(\
-                #     Neigh_x not in cluster_node_indices))
-                print(f'Neig_x_in_Clust is {Neigh_x_in_clust}')
+                if self.verbose: 
+                  print(f'Neighbors of {x} in {cluster.get_name()} are {Neigh_x_in_clust}')
                 possible_blocking_nodes = np.array(local_graph_node_indices)
                 possible_blocking_nodes = np.delete(possible_blocking_nodes, \
                                                     np.where(possible_blocking_nodes == x))
@@ -298,7 +306,7 @@ class ClustPC():
                         p = self.cdag.cg.ci_test(x, y, S)
                         if p > self.alpha:
                             if self.verbose:
-                                print('%d ind %d | %s with p-value %f\n' % (x, y, S, p))
+                                print('%d ind %d | %s with p-value %f' % (x, y, S, p))
                             if not self.stable:
                                 edge1 = self.cdag.cg.G.get_edge(self.cdag.cg.G.nodes[x], \
                                                                 self.cdag.cg.G.nodes[y])
@@ -318,7 +326,7 @@ class ClustPC():
                                     sepsets.add(s)
                         else:
                             if self.verbose:
-                                print('%d dep %d | %s with p-value %f\n' % (x, y, S, p))
+                                print('%d dep %d | %s with p-value %f' % (x, y, S, p))
                     append_value(self.cdag.cg.sepset, x, y, tuple(sepsets))
                     append_value(self.cdag.cg.sepset, y, x, tuple(sepsets))
             if self.show_progress:
