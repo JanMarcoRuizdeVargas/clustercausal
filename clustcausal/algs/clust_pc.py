@@ -96,13 +96,34 @@ class ClustPC():
         c_edges = self.cdag.cluster_edges
         #c1, c2, cm are the names of clusters
         for c1 in list(self.cdag.cluster_mapping.keys()):
+            c1_cluster = self.cdag.get_node_by_name(c1, cg = self.cdag.cluster_graph)
+            c1_indice = self.cdag.cluster_graph.G.node_map[c1_cluster]
             for c2 in list(self.cdag.cluster_mapping.keys()):
-                if c1 != c2:
-                    for cm in list(self.cdag.cluster_mapping.keys()):
-                        if ((c1, cm) in c_edges) and ((cm,c2) in c_edges):
-                            print('Found {c1}->{cm}->{c2}')
-                            # Add all nodes in cm to sepset of c1, c2
-                            
+                c2_cluster = self.cdag.get_node_by_name(c2, cg = self.cdag.cluster_graph)
+                c2_indice = self.cdag.cluster_graph.G.node_map[c2_cluster]
+                # If c1 is not c2 and they are not adjacent, they are d-separable
+                # Find this set and add it to sepset for each node pair of c1, c2
+                # (needed for Meeks rules, which need access to this information)
+                if (c1 != c2) and (c1_indice not in self.cluster_graph.neighbors(c2_indice)):
+                    depth = -1
+                    delete = [c1_indice, c2_indice]
+                    all_cluster_indices = np.array(range(self.cdag.cluster_graph.G.num_vars))
+                    mask = np.isin(all_cluster_indices, delete)
+                    other_cluster_indices = all_cluster_indices[~mask]
+                    Flag = True
+                    while self.cluster_graph.max_degre() - 1 > depth:
+                      while Flag:
+                        for candidate_sepset in list(combinations(other_cluster_indices, depth)):
+                          # TODO get node_indices based on cluster indices, then add to sepset
+                            cm_cluster = self.cdag.get_node_by_name(cm, cg = self.cdag.cluster_graph)
+                            if self.cdag.cluster_graph.is_dseparated_from(c1_cluster, c2_cluster, [cm_cluster]):
+                                c1_node_indices = self.cdag.get_node_indices_of_cluster(c1_cluster)
+                                cm_node_indices = self.cdag.get_node_indices_of_cluster(cm_cluster)
+                                c2_node_indices = self.cdag.get_node_indices_of_cluster(c2_cluster)
+                                for i in c1_node_indices:
+                                    for j in c2_node_indices:
+                                        append_value(cg_0.sepset, i, j, cm_node_indices)
+                                        Flag = False                           
         
         cg_1 = cg_0
         background_knowledge = self.background_knowledge
@@ -153,6 +174,7 @@ class ClustPC():
         depth = -1
 
         # Define the subgraph induced by the cluster nodes
+        # Could be replaced by cdag.get_node_indices_of_cluster(cluster)
         nodes_names_in_low_cluster = self.cdag.cluster_mapping[low_cluster.get_name()]
         nodes_names_in_high_cluster = self.cdag.cluster_mapping[high_cluster.get_name()]
         nodes_in_low_cluster = self.cdag.get_list_of_nodes_by_name(list_of_node_names= \
@@ -165,16 +187,16 @@ class ClustPC():
                                       + len(nodes_names_in_high_cluster), \
                                       nodes_names_in_low_cluster + nodes_names_in_high_cluster)
         subgraph_cluster.G = self.cdag.subgraph(nodes_in_low_cluster + nodes_in_high_cluster)
+        # Collect the indices of nodes in subgraph and local_graph, w.r.t.
+        # the entire adjacency matrix self.cdag.cg.G.graph
+        cluster_node_indices = np.array([self.cdag.cg.G.node_map[node] \
+                                    for node in subgraph_cluster.G.nodes])
 
         # Define the local graph which contains possible separating sets, here it is 
         # low cluster union high cluster union low cluster parents 
         # (high cluster is in low cluster parents per definition)
         local_graph = self.cdag.get_local_graph(low_cluster)
 
-        # Collect the indices of nodes in subgraph and local_graph, w.r.t.
-        # the entire adjacency matrix self.cdag.cg.G.graph
-        cluster_node_indices = np.array([self.cdag.cg.G.node_map[node] \
-                                    for node in subgraph_cluster.G.nodes])
         if self.verbose: print(f'Cluster node indices are {cluster_node_indices}')
         local_graph_node_indices = np.array([self.cdag.cg.G.node_map[node] \
                                         for node in local_graph.G.nodes])
@@ -286,21 +308,21 @@ class ClustPC():
 
         # Collect relevant nodes, i.e. cluster and parents of cluster in a list of Node objects
 
-        # Define the subgraph induced by the cluster nodes
+        # Define the subgraph induced by the cluster nodes 
+        # Could be replaced by cdag.get_node_indices_of_cluster(cluster)
         nodes_names_in_cluster = self.cdag.cluster_mapping[cluster.get_name()]
         nodes_in_cluster = self.cdag.get_list_of_nodes_by_name(list_of_node_names= \
                                                                nodes_names_in_cluster, \
                                                                 cg = self.cdag.cg)
         subgraph_cluster = CausalGraph(len(nodes_names_in_cluster), nodes_names_in_cluster)
         subgraph_cluster.G = self.cdag.subgraph(nodes_in_cluster)
+        cluster_node_indices = np.array([self.cdag.cg.G.node_map[node] \
+                                    for node in subgraph_cluster.G.nodes])
 
         # Define the local graph which contains possible separating sets
         local_graph = self.cdag.get_local_graph(cluster)
-
         # Possibly replace subgraph_cluster and local_graph by index_arrays, 
         # as have to operate on entire adjacency matrix and data matrix
-        cluster_node_indices = np.array([self.cdag.cg.G.node_map[node] \
-                                    for node in subgraph_cluster.G.nodes])
         if self.verbose: print(f'Cluster node indices are {cluster_node_indices}')
         local_graph_node_indices = np.array([self.cdag.cg.G.node_map[node] \
                                         for node in local_graph.G.nodes])

@@ -221,6 +221,21 @@ class CDAG:
                 max_degree = deg
         return max_degree
     
+    def get_node_indices_of_cluster(self, cluster):
+        '''
+        Takes in a cluster and returns the node indices in the adjacency matrix
+        self.cg.node_map
+        '''
+        nodes_names_in_cluster = self.cluster_mapping[cluster.get_name()]
+        nodes_in_cluster = self.get_list_of_nodes_by_name(list_of_node_names= \
+                                                               nodes_names_in_cluster, \
+                                                                cg = self.cg)
+        subgraph_cluster = CausalGraph(len(nodes_names_in_cluster), nodes_names_in_cluster)
+        subgraph_cluster.G = self.subgraph(nodes_in_cluster)
+        cluster_node_indices = np.array([self.cg.G.node_map[node] \
+                                    for node in subgraph_cluster.G.nodes])
+        return cluster_node_indices
+    
     @staticmethod
     def get_node_by_name(node_name, cg: CausalGraph):
         """
