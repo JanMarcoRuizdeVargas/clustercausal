@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import networkx as nx
 import causallearn
-import castle
+# import castle
 import pydot
 import logging
 

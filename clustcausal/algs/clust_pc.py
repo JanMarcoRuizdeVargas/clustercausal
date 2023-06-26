@@ -5,7 +5,7 @@ from numpy import ndarray
 import pandas as pd
 import networkx as nx
 import causallearn
-import castle
+# import castle
 import logging
 
 import time
@@ -72,6 +72,7 @@ class ClustPC():
         '''
         Runs the C-PC algorithm. 
         '''
+        start = time.time()
         # no_of_var = self.data.shape[1]
         # pbar = tqdm(total=no_of_var) if self.show_progress else None
         for cluster_name in self.cdag.cdag_list_of_topological_sort:
@@ -80,15 +81,58 @@ class ClustPC():
             for parent in self.cdag.cluster_graph.G.get_parents(cluster):
               print(f'\nInter phase between low cluster {cluster.get_name()} and parent {parent.get_name()}')
               self.inter_cluster_phase(cluster, parent)
-            # TODO Apply Meek edge orientation rules
+            # TODO Apply Meek edge orientation rules here too?
             print(f'\nIntra phase in cluster {cluster.get_name()}')
             self.intra_cluster_phase(cluster)
-            # TODO Apply Meek edge orientation rules
+            # TODO Apply Meek edge orientation rules here too?
         # if self.show_progress:
         #   pbar.close()
         
         # TODO Meek edge orientation rules
+        print('Applying edge orientation rules')
+        # Add d-separations present in cluster_graph to sepsets - cluster triplets
+        cg_0 = self.cdag.cg
+        # This loop could be done more efficiently by only going through parents TODO
+        c_edges = self.cdag.cluster_edges
+        #c1, c2, cm are the names of clusters
+        for c1 in list(self.cdag.cluster_mapping.keys()):
+            for c2 in list(self.cdag.cluster_mapping.keys()):
+                if c1 != c2:
+                    for cm in list(self.cdag.cluster_mapping.keys()):
+                        if ((c1, cm) in c_edges) and ((cm,c2) in c_edges):
+                            print('Found {c1}->{cm}->{c2}')
+                            # Add all nodes in cm to sepset of c1, c2
+                            
+        
+        cg_1 = cg_0
+        background_knowledge = self.background_knowledge
+        if self.uc_rule == 0:
+            if self.uc_priority != -1:
+                cg_2 = UCSepset.uc_sepset(cg_1, self.uc_priority, background_knowledge=background_knowledge)
+            else:
+                cg_2 = UCSepset.uc_sepset(cg_1, background_knowledge=background_knowledge)
+            cg = Meek.meek(cg_2, background_knowledge=background_knowledge)
 
+        elif self.uc_rule == 1:
+            if self.uc_priority != -1:
+                cg_2 = UCSepset.maxp(cg_1, self.uc_priority, background_knowledge=background_knowledge)
+            else:
+                cg_2 = UCSepset.maxp(cg_1, background_knowledge=background_knowledge)
+            cg = Meek.meek(cg_2, background_knowledge=background_knowledge)
+
+        elif self.uc_rule == 2:
+            if self.uc_priority != -1:
+                cg_2 = UCSepset.definite_maxp(cg_1, self.alpha, self.uc_priority, background_knowledge=background_knowledge)
+            else:
+                cg_2 = UCSepset.definite_maxp(cg_1, self.alpha, background_knowledge=background_knowledge)
+            cg_before = Meek.definite_meek(cg_2, background_knowledge=background_knowledge)
+            cg = Meek.meek(cg_before, background_knowledge=background_knowledge)
+        else:
+            raise ValueError("uc_rule should be in [0, 1, 2]")
+        
+        end = time.time()
+        self.cdag.cg.PC_elapsed = end - start
+        print(f'Duration of algorithm was {self.cdag.cg.PC_elapsed}sec')
 
         return self.cdag.cg # Return CausalGraph of the CDAG
 
