@@ -83,8 +83,10 @@ class ClustPC():
                        
 
     def run(self) -> CausalGraph:
-        for cluster in self.cdag.cdag_list_of_topological_sort:
-            self.inter_cluster_phase(cluster)
+        for cluster_name in self.cdag.cdag_list_of_topological_sort:
+            cluster = self.cdag.get_node_by_name(cluster_name, cg = self.cdag.cluster_graph)
+            for parent in self.cdag.cluster_graph.G.get_parents(cluster):
+              self.inter_cluster_phase(cluster, parent)
             # Apply Meek edge orientation rules
             self.intra_cluster_phase(cluster)
             # Apply Meek edge orientation rules
@@ -128,7 +130,7 @@ class ClustPC():
         subgraph_cluster = CausalGraph(len(nodes_names_in_low_cluster) \
                                       + len(nodes_names_in_high_cluster), \
                                       nodes_names_in_low_cluster + nodes_names_in_high_cluster)
-        subgraph_cluster.G = self.cdag.subgraph(nodes_names_in_low_cluster + nodes_names_in_high_cluster)
+        subgraph_cluster.G = self.cdag.subgraph(nodes_in_low_cluster + nodes_in_high_cluster)
 
         # Define the local graph which contains possible separating sets, here it is 
         # low cluster union high cluster union low cluster parents 
