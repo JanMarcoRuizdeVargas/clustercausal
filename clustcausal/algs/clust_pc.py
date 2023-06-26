@@ -33,20 +33,9 @@ class ClustPC():
     Adapted from causallearn pc algorithm. 
     
     """
-    # def __init__(self, cdag : CDAG):#, data: ndarray):
-    #     self.cdag = cdag
-    #     self.cdag.cdag_to_mpdag() # Get pruned MPDAG from CDAG
-    #     self.cdag.get_topological_ordering()  # Get topological ordering of CDAG
-    #     # self.data = data
-    #     # if data is not pd.DataFrame:
-    #     #     logging.info('Data converted into pandas dataframe with columns X1, X2, ...')
-    #     #     data = pd.DataFrame(data)
-    #     #     data.columns = self.cdag.node_names
-
     def __init__(self,
         cdag: CDAG,
         data: ndarray,
-        # node_names: List[str] | None,
         alpha: float,
         indep_test: str = 'fisherz',
         stable: bool = True,
@@ -77,20 +66,24 @@ class ClustPC():
 
         # Set independence test
         self.cdag.cg.test = CIT(self.data, indep_test, **kwargs)
-        # self.indep_test = indep_test
-        # self.cdag.cg.set_ind_test(cit)
-        # print('indep_test: ', type(self.cdag.cg.test), self.cdag.cg.test)
                        
 
     def run(self) -> CausalGraph:
+        '''
+        Runs the C-PC algorithm. 
+        '''
         for cluster_name in self.cdag.cdag_list_of_topological_sort:
+            if self.verbose: print(f'Beginning work on {cluster_name}')
             cluster = self.cdag.get_node_by_name(cluster_name, cg = self.cdag.cluster_graph)
             for parent in self.cdag.cluster_graph.G.get_parents(cluster):
+              if self.verbose: print(f'Inter phase between low cluster {cluster.get_name()} \
+              and parent {parent.get_name()}')
               self.inter_cluster_phase(cluster, parent)
-            # Apply Meek edge orientation rules
+            # TODO Apply Meek edge orientation rules
+            if self.verbose: print(f'Intra phase in cluster {cluster.get_name()}')
             self.intra_cluster_phase(cluster)
-            # Apply Meek edge orientation rules
-        # Apply Meek edge orientation rules
+            # TODO Apply Meek edge orientation rules
+        # TODO Meek edge orientation rules
         return self.cdag.cg # Return CausalGraph of the CDAG
 
     def inter_cluster_phase(self, low_cluster, high_cluster):
@@ -98,10 +91,6 @@ class ClustPC():
         Runs the inter-cluster phase of the ClustPC algorithm for a given cluster.
         cluster is a node object of CausalGraph
         """
-        # Identify the nodes needed to be considered, i.e. cluster and parents of cluster
-        # parent_clusters = self.cdag.cluster_dag.G.get_parents(cluster)
-        # self.cdag.cg.G.get_parents
-
         assert type(self.data) == np.ndarray
         assert 0 < self.alpha < 1
         
@@ -113,10 +102,6 @@ class ClustPC():
 
         depth = -1
         pbar = tqdm(total=no_of_var) if self.show_progress else None
-
-        # Collect relevant nodes, i.e. clusters and parents of lower 
-        # cluster in a list of Node objects
-        # relevant_clusters, relevant_nodes = self.cdag.get_parent_plus(cluster)
 
         # Define the subgraph induced by the cluster nodes
         nodes_names_in_low_cluster = self.cdag.cluster_mapping[low_cluster.get_name()]
@@ -134,11 +119,11 @@ class ClustPC():
 
         # Define the local graph which contains possible separating sets, here it is 
         # low cluster union high cluster union low cluster parents 
-        # high cluster is in low cluster parents per definition
+        # (high cluster is in low cluster parents per definition)
         local_graph = self.cdag.get_local_graph(low_cluster)
 
-        # Possibly replace subgraph_cluster and local_graph by index_arrays, 
-        # as have to operate on entire adjacency matrix and data matrix
+        # Collect the indices of nodes in subgraph and local_graph, w.r.t.
+        # the entire adjacency matrix self.cdag.cg.G.graph
         cluster_node_indices = np.array([self.cdag.cg.G.node_map[node] \
                                     for node in subgraph_cluster.G.nodes])
         print(f'Cluster node indices are {cluster_node_indices}')
