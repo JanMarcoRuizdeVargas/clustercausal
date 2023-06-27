@@ -73,7 +73,7 @@ class ClustPC():
         Runs the C-PC algorithm. 
         '''
         start = time.time()
-        # no_of_var = self.data.shape[1]
+        no_of_var = self.data.shape[1]
         # pbar = tqdm(total=no_of_var) if self.show_progress else None
         for cluster_name in self.cdag.cdag_list_of_topological_sort:
             print(f'\nBeginning work on cluster {cluster_name}')
@@ -92,39 +92,65 @@ class ClustPC():
         print('Applying edge orientation rules')
         # Add d-separations present in cluster_graph to sepsets - cluster triplets
         cg_0 = self.cdag.cg
+        '''
         # This loop could be done more efficiently by only going through parents TODO
         c_edges = self.cdag.cluster_edges
         #c1, c2, cm are the names of clusters
+        if self.show_progress:
+            no_of_combinations = len(self.cdag.cluster_mapping.keys())**2 - len(self.cdag.cluster_mapping.keys())
+            pbar = tqdm(range(no_of_combinations))
         for c1 in list(self.cdag.cluster_mapping.keys()):
             c1_cluster = self.cdag.get_node_by_name(c1, cg = self.cdag.cluster_graph)
             c1_indice = self.cdag.cluster_graph.G.node_map[c1_cluster]
             for c2 in list(self.cdag.cluster_mapping.keys()):
                 c2_cluster = self.cdag.get_node_by_name(c2, cg = self.cdag.cluster_graph)
                 c2_indice = self.cdag.cluster_graph.G.node_map[c2_cluster]
+                if self.show_progress:
+                    pbar.update()
+                if self.show_progress:
+                    pbar.set_description(f'Searching sepset between {c1} and {c2}')
                 # If c1 is not c2 and they are not adjacent, they are d-separable
                 # Find this set and add it to sepset for each node pair of c1, c2
                 # (needed for Meeks rules, which need access to this information)
-                if (c1 != c2) and (c1_indice not in self.cluster_graph.neighbors(c2_indice)):
+                if (c1 != c2) and (c1_indice not in self.cdag.cluster_graph.neighbors(c2_indice)):
+                    # Find the cluster indices in cluster_graph of the potential separating clusters
                     depth = -1
                     delete = [c1_indice, c2_indice]
                     all_cluster_indices = np.array(range(self.cdag.cluster_graph.G.num_vars))
                     mask = np.isin(all_cluster_indices, delete)
                     other_cluster_indices = all_cluster_indices[~mask]
                     Flag = True
-                    while self.cluster_graph.max_degre() - 1 > depth:
-                      while Flag:
+                    while self.cdag.cluster_graph.max_degree() - 1 > depth: # Search sepsets of cardinality 1,2,3,...
+                      depth += 1
+                      while Flag: # While not having found a separating set
                         for candidate_sepset in list(combinations(other_cluster_indices, depth)):
-                          # TODO get node_indices based on cluster indices, then add to sepset
-                            cm_cluster = self.cdag.get_node_by_name(cm, cg = self.cdag.cluster_graph)
-                            if self.cdag.cluster_graph.is_dseparated_from(c1_cluster, c2_cluster, [cm_cluster]):
-                                c1_node_indices = self.cdag.get_node_indices_of_cluster(c1_cluster)
-                                cm_node_indices = self.cdag.get_node_indices_of_cluster(cm_cluster)
-                                c2_node_indices = self.cdag.get_node_indices_of_cluster(c2_cluster)
-                                for i in c1_node_indices:
-                                    for j in c2_node_indices:
-                                        append_value(cg_0.sepset, i, j, cm_node_indices)
-                                        Flag = False                           
-        
+                          # candidate_sepset is list of cluster_indices, transform it into cluster_list (Node objects)
+                          candidate_cluster_list = []
+                          for indice in candidate_sepset:
+                            dictionary = self.cdag.cluster_graph.G.node_map
+                            candidate_cluster_list.append(self.cdag.get_key_by_value(dictionary, indice))
+                          if self.cdag.cluster_graph.G.is_dseparated_from(c1_cluster, c2_cluster, candidate_cluster_list):
+                            if self.verbose: print(f'{c1} d-connected {c2} | {candidate_sepset}')
+                            # If d-separation is found in cluster_graph, get node_indices and add them to sepset of each i,j
+                            # of the separated clusters
+                            c1_node_indices = self.cdag.get_node_indices_of_cluster(c1_cluster)
+                            c2_node_indices = self.cdag.get_node_indices_of_cluster(c2_cluster) 
+                            potential_sepset = []
+                            for candidate in candidate_sepset:
+                              sepset_node_indices = self.cdag.get_node_indices_of_cluster(candidate)
+                              potential_sepset.extend(sepset_node_indices)
+                            for i in c1_node_indices:
+                                for j in c2_node_indices:
+                                    append_value(cg_0.sepset, i, j, sepset_node_indices)
+                            Flag = False                           
+        '''
+        # As some nodes have no edge by CDAG definition, we manually have to add an empty sepset for them
+        # Else the Meek rules try to access NoneType
+        for i in range(no_of_var):
+            for j in range(no_of_var):
+                append_value(self.cdag.cg.sepset, i, j, tuple(set()))
+                append_value(self.cdag.cg.sepset, j, i, tuple(set()))
+
         cg_1 = cg_0
         background_knowledge = self.background_knowledge
         if self.uc_rule == 0:
@@ -244,11 +270,13 @@ class ClustPC():
                     Neigh_x_no_y = np.delete(possible_blocking_nodes, \
                                              np.where(possible_blocking_nodes == y))
                     for S in combinations(Neigh_x_no_y, depth):
+                        print(f'Set S to be tested is {S}')
                         p = self.cdag.cg.ci_test(x, y, S)
                         if p > self.alpha:
                             if self.verbose:
                                 print('%d ind %d | %s with p-value %f' % (x, y, S, p))
                             if not self.stable:
+                                print('not stable')
                                 edge1 = self.cdag.cg.G.get_edge(self.cdag.cg.G.nodes[x], \
                                                                 self.cdag.cg.G.nodes[y])
                                 if edge1 is not None:
@@ -261,13 +289,18 @@ class ClustPC():
                                 append_value(self.cdag.cg.sepset, y, x, S)
                                 break
                             else:
+                                print('stable')
                                 edge_removal.append((x, y))  # after all conditioning sets at
                                 edge_removal.append((y, x))  # depth l have been considered
+                                print(f'S is {S}')
                                 for s in S:
+                                    print(f'Added {s} to sepset {S}')
                                     sepsets.add(s)
                         else:
                             if self.verbose:
                                 print('%d dep %d | %s with p-value %f' % (x, y, S, p))
+                    print(f'Added sepset: {x} !- {y} | {tuple(sepsets)}')
+                    print(f'Type of sepsets is {type(sepsets)}')
                     append_value(self.cdag.cg.sepset, x, y, tuple(sepsets))
                     append_value(self.cdag.cg.sepset, y, x, tuple(sepsets))
             if self.show_progress:
@@ -393,6 +426,8 @@ class ClustPC():
                         else:
                             if self.verbose:
                                 print('%d dep %d | %s with p-value %f' % (x, y, S, p))
+                    print(f'Added sepset: {x} !- {y} | {tuple(sepsets)}')
+                    print(f'Type of sepsets is {type(sepsets)}')
                     append_value(self.cdag.cg.sepset, x, y, tuple(sepsets))
                     append_value(self.cdag.cg.sepset, y, x, tuple(sepsets))
             if self.show_progress:
