@@ -91,7 +91,7 @@ class ClustPC():
         # TODO Meek edge orientation rules
         print('Applying edge orientation rules')
         # Add d-separations present in cluster_graph to sepsets - cluster triplets
-        cg_0 = self.cdag.cg
+        # This code is not necessary - ignore
         '''
         # This loop could be done more efficiently by only going through parents TODO
         c_edges = self.cdag.cluster_edges
@@ -144,14 +144,13 @@ class ClustPC():
                                     append_value(cg_0.sepset, i, j, sepset_node_indices)
                             Flag = False                           
         '''
-        # As some nodes have no edge by CDAG definition, we manually have to add an empty sepset for them
-        # Else the Meek rules try to access NoneType
+        # As some nodes have no edge by CDAG definition, they never get tested so have Nonetype sepsets
+        # manually have to add an empty sepset for them else the Meek rules try to access NoneType
         for i in range(no_of_var):
             for j in range(no_of_var):
                 append_value(self.cdag.cg.sepset, i, j, tuple(set()))
                 append_value(self.cdag.cg.sepset, j, i, tuple(set()))
-
-        cg_1 = cg_0
+        cg_1 = self.cdag.cg
         background_knowledge = self.background_knowledge
         if self.uc_rule == 0:
             if self.uc_priority != -1:
@@ -176,7 +175,7 @@ class ClustPC():
             cg = Meek.meek(cg_before, background_knowledge=background_knowledge)
         else:
             raise ValueError("uc_rule should be in [0, 1, 2]")
-        
+        self.cdag.cg = cg
         end = time.time()
         self.cdag.cg.PC_elapsed = end - start
         print(f'Duration of algorithm was {self.cdag.cg.PC_elapsed}sec')
@@ -270,13 +269,12 @@ class ClustPC():
                     Neigh_x_no_y = np.delete(possible_blocking_nodes, \
                                              np.where(possible_blocking_nodes == y))
                     for S in combinations(Neigh_x_no_y, depth):
-                        print(f'Set S to be tested is {S}')
+                        # print(f'Set S to be tested is {S}')
                         p = self.cdag.cg.ci_test(x, y, S)
                         if p > self.alpha:
                             if self.verbose:
                                 print('%d ind %d | %s with p-value %f' % (x, y, S, p))
                             if not self.stable:
-                                print('not stable')
                                 edge1 = self.cdag.cg.G.get_edge(self.cdag.cg.G.nodes[x], \
                                                                 self.cdag.cg.G.nodes[y])
                                 if edge1 is not None:
@@ -289,18 +287,15 @@ class ClustPC():
                                 append_value(self.cdag.cg.sepset, y, x, S)
                                 break
                             else:
-                                print('stable')
                                 edge_removal.append((x, y))  # after all conditioning sets at
                                 edge_removal.append((y, x))  # depth l have been considered
-                                print(f'S is {S}')
                                 for s in S:
-                                    print(f'Added {s} to sepset {S}')
                                     sepsets.add(s)
                         else:
                             if self.verbose:
                                 print('%d dep %d | %s with p-value %f' % (x, y, S, p))
-                    print(f'Added sepset: {x} !- {y} | {tuple(sepsets)}')
-                    print(f'Type of sepsets is {type(sepsets)}')
+                    # print(f'Added sepset: {x} !- {y} | {tuple(sepsets)}')
+                    # print(f'Type of sepsets is {type(sepsets)}')
                     append_value(self.cdag.cg.sepset, x, y, tuple(sepsets))
                     append_value(self.cdag.cg.sepset, y, x, tuple(sepsets))
             if self.show_progress:
@@ -426,8 +421,8 @@ class ClustPC():
                         else:
                             if self.verbose:
                                 print('%d dep %d | %s with p-value %f' % (x, y, S, p))
-                    print(f'Added sepset: {x} !- {y} | {tuple(sepsets)}')
-                    print(f'Type of sepsets is {type(sepsets)}')
+                    # print(f'Added sepset: {x} !- {y} | {tuple(sepsets)}')
+                    # print(f'Type of sepsets is {type(sepsets)}')
                     append_value(self.cdag.cg.sepset, x, y, tuple(sepsets))
                     append_value(self.cdag.cg.sepset, y, x, tuple(sepsets))
             if self.show_progress:
