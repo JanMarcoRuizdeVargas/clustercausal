@@ -121,8 +121,12 @@ class CDAG:
         """
         nx_helper_graph = nx.DiGraph()
         nx_helper_graph.add_edges_from(self.cluster_edges)
-        self.cdag_topological_sort = nx.topological_sort(nx_helper_graph)
-        self.cdag_list_of_topological_sort = list(self.cdag_topological_sort)
+        topological_generator = nx.topological_sort(nx_helper_graph)
+        self.cdag_list_of_topological_sort = list(topological_generator)
+        if len(self.cdag_list_of_topological_sort) == 0:
+            # If only one cluster, nx doesn't return a list containing only the cluster
+            self.cdag_list_of_topological_sort = list(self.cluster_mapping.keys())
+            return list(self.cluster_mapping.keys())
         return self.cdag_list_of_topological_sort
     
 

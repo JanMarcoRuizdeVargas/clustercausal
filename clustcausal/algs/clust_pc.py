@@ -251,13 +251,12 @@ class ClustPC():
                 Neigh_x = self.cdag.cg.neighbors(x)
                 # if self.verbose: print(f'Neighbors of {x} is {Neigh_x}')
                 # Remove neighbors that are not in cluster
-                mask = np.isin(Neigh_x, cluster_node_indices)
-                Neigh_x_in_clust = Neigh_x[mask]
+                cluster_mask = np.isin(Neigh_x, cluster_node_indices)
+                Neigh_x_in_clust = Neigh_x[cluster_mask]
                 if self.verbose: 
                   print(f'Neighbors of {x} in ({low_cluster.get_name()},{high_cluster.get_name()}) are {Neigh_x_in_clust}')
-                possible_blocking_nodes = np.array(local_graph_node_indices)
-                possible_blocking_nodes = np.delete(possible_blocking_nodes, \
-                                                    np.where(possible_blocking_nodes == x))
+                local_mask = np.isin(Neigh_x, local_graph_node_indices)
+                possible_blocking_nodes = Neigh_x[local_mask]
                 if len(possible_blocking_nodes) < depth - 1:
                     continue
                 for y in Neigh_x_in_clust:
@@ -309,6 +308,9 @@ class ClustPC():
                     x_name = self.cdag.get_key_by_value(self.cdag.cg.G.node_map, x)
                     y_name = self.cdag.get_key_by_value(self.cdag.cg.G.node_map, y)
                     print(f'Deleted edge from {x_name} to {y_name}')
+            local_graph = self.cdag.get_local_graph(low_cluster)
+            # print('LOCAL GRAPH DRAWN BELOW')
+            # local_graph.draw_pydot_graph()
 
         if self.show_progress:
             pbar.close()
@@ -379,13 +381,14 @@ class ClustPC():
                 Neigh_x = self.cdag.cg.neighbors(x)
                 # if self.verbose: print(f'Neigh_x is {Neigh_x}')
                 # Remove neighbors that are not in cluster
-                mask = np.isin(Neigh_x, cluster_node_indices)
-                Neigh_x_in_clust = Neigh_x[mask]
+                cluster_mask = np.isin(Neigh_x, cluster_node_indices)
+                Neigh_x_in_clust = Neigh_x[cluster_mask]
                 if self.verbose: 
                   print(f'Neighbors of {x} in {cluster.get_name()} are {Neigh_x_in_clust}')
-                possible_blocking_nodes = np.array(local_graph_node_indices)
-                possible_blocking_nodes = np.delete(possible_blocking_nodes, \
-                                                    np.where(possible_blocking_nodes == x))
+                # Possible blocking nodes are 
+                local_mask = np.isin(Neigh_x, local_graph_node_indices)
+                possible_blocking_nodes = Neigh_x[local_mask]
+                # print(f'Possible blocking nodes are {possible_blocking_nodes}')
                 if len(Neigh_x) < depth - 1:
                     continue
                 for y in Neigh_x_in_clust:
@@ -434,6 +437,10 @@ class ClustPC():
                 if edge1 is not None:
                     self.cdag.cg.G.remove_edge(edge1)
                     print(f'Deleted edge from {x} to {y}')
+            # Update local graph to reflect edge deletions that were just done
+            local_graph = self.cdag.get_local_graph(cluster)
+            # print('LOCAL GRAPH DRAWN BELOW')
+            # local_graph.draw_pydot_graph()
 
         if self.show_progress:
             pbar.close()
