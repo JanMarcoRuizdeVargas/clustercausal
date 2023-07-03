@@ -5,6 +5,7 @@ from numpy import ndarray
 import pandas as pd
 import networkx as nx
 import causallearn
+
 # import castle
 import logging
 
@@ -19,37 +20,41 @@ from causallearn.utils.PCUtils.BackgroundKnowledge import BackgroundKnowledge
 from causallearn.utils.PCUtils.Helper import append_value
 from causallearn.utils.cit import *
 from causallearn.utils.PCUtils import Helper, Meek, SkeletonDiscovery, UCSepset
-from causallearn.utils.PCUtils.BackgroundKnowledgeOrientUtils import \
-    orient_by_background_knowledge
+from causallearn.utils.PCUtils.BackgroundKnowledgeOrientUtils import (
+    orient_by_background_knowledge,
+)
 from causallearn.search.ConstraintBased.PC import pc, pc_alg
 
 from clustcausal.clusterdag.cluster_dag import CDAG
 
-logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
-class ClustPC():
+
+class ClustPC:
     """
     Runs the ClustPC algorithm according to my master thesis.
-    Adapted from causallearn pc algorithm. 
-    
+    Adapted from causallearn pc algorithm.
+
     """
-    def __init__(self,
+
+    def __init__(
+        self,
         cdag: CDAG,
         data: ndarray,
         alpha: float,
-        indep_test: str = 'fisherz',
+        indep_test: str = "fisherz",
         stable: bool = True,
         uc_rule: int = 0,
         uc_priority: int = 2,
         background_knowledge: BackgroundKnowledge | None = None,
         verbose: bool = False,
         show_progress: bool = True,
-        **kwargs
-        ) -> None:
+        **kwargs,
+    ) -> None:
         """
         Set parameters for the clust PC algorithm.
         """
-        self.cdag  = cdag
+        self.cdag = cdag
         self.data = data
         self.node_names = cdag.node_names
         self.alpha = alpha
@@ -61,38 +66,42 @@ class ClustPC():
         self.verbose = verbose
         self.show_progress = show_progress
         self.kwargs = kwargs
-        self.cdag.cdag_to_mpdag() # Get pruned MPDAG from CDAG
+        self.cdag.cdag_to_mpdag()  # Get pruned MPDAG from CDAG
         self.cdag.get_cluster_topological_ordering()  # Get topological ordering of CDAG
 
         # Set independence test
         self.cdag.cg.test = CIT(self.data, indep_test, **kwargs)
-                       
 
     def run(self) -> CausalGraph:
-        '''
-        Runs the C-PC algorithm. 
-        '''
+        """
+        Runs the C-PC algorithm.
+        """
         start = time.time()
         no_of_var = self.data.shape[1]
         # pbar = tqdm(total=no_of_var) if self.show_progress else None
         for cluster_name in self.cdag.cdag_list_of_topological_sort:
-            print(f'\nBeginning work on cluster {cluster_name}')
-            cluster = self.cdag.get_node_by_name(cluster_name, cg = self.cdag.cluster_graph)
+            print(f"\nBeginning work on cluster {cluster_name}")
+            cluster = self.cdag.get_node_by_name(
+                cluster_name, cg=self.cdag.cluster_graph
+            )
             for parent in self.cdag.cluster_graph.G.get_parents(cluster):
-              print(f'\nInter phase between low cluster {cluster.get_name()} and parent {parent.get_name()}')
-              self.inter_cluster_phase(cluster, parent)
+                print(
+                    "\nInter phase between low cluster"
+                    f" {cluster.get_name()} and parent {parent.get_name()}"
+                )
+                self.inter_cluster_phase(cluster, parent)
             # TODO Apply Meek edge orientation rules here too?
-            print(f'\nIntra phase in cluster {cluster.get_name()}')
+            print(f"\nIntra phase in cluster {cluster.get_name()}")
             self.intra_cluster_phase(cluster)
             # TODO Apply Meek edge orientation rules here too?
         # if self.show_progress:
         #   pbar.close()
-        
+
         # TODO Meek edge orientation rules
-        print('Applying edge orientation rules')
+        print("Applying edge orientation rules")
         # Add d-separations present in cluster_graph to sepsets - cluster triplets
         # This code is not necessary - ignore
-        '''
+        """
         # This loop could be done more efficiently by only going through parents TODO
         c_edges = self.cdag.cluster_edges
         #c1, c2, cm are the names of clusters
@@ -143,7 +152,7 @@ class ClustPC():
                                 for j in c2_node_indices:
                                     append_value(cg_0.sepset, i, j, sepset_node_indices)
                             Flag = False                           
-        '''
+        """
         # As some nodes have no edge by CDAG definition, they never get tested so have Nonetype sepsets
         # manually have to add an empty sepset for them else the Meek rules try to access NoneType
         for i in range(no_of_var):
@@ -154,33 +163,56 @@ class ClustPC():
         background_knowledge = self.background_knowledge
         if self.uc_rule == 0:
             if self.uc_priority != -1:
-                cg_2 = UCSepset.uc_sepset(cg_1, self.uc_priority, background_knowledge=background_knowledge)
+                cg_2 = UCSepset.uc_sepset(
+                    cg_1,
+                    self.uc_priority,
+                    background_knowledge=background_knowledge,
+                )
             else:
-                cg_2 = UCSepset.uc_sepset(cg_1, background_knowledge=background_knowledge)
+                cg_2 = UCSepset.uc_sepset(
+                    cg_1, background_knowledge=background_knowledge
+                )
             cg = Meek.meek(cg_2, background_knowledge=background_knowledge)
 
         elif self.uc_rule == 1:
             if self.uc_priority != -1:
-                cg_2 = UCSepset.maxp(cg_1, self.uc_priority, background_knowledge=background_knowledge)
+                cg_2 = UCSepset.maxp(
+                    cg_1,
+                    self.uc_priority,
+                    background_knowledge=background_knowledge,
+                )
             else:
-                cg_2 = UCSepset.maxp(cg_1, background_knowledge=background_knowledge)
+                cg_2 = UCSepset.maxp(
+                    cg_1, background_knowledge=background_knowledge
+                )
             cg = Meek.meek(cg_2, background_knowledge=background_knowledge)
 
         elif self.uc_rule == 2:
             if self.uc_priority != -1:
-                cg_2 = UCSepset.definite_maxp(cg_1, self.alpha, self.uc_priority, background_knowledge=background_knowledge)
+                cg_2 = UCSepset.definite_maxp(
+                    cg_1,
+                    self.alpha,
+                    self.uc_priority,
+                    background_knowledge=background_knowledge,
+                )
             else:
-                cg_2 = UCSepset.definite_maxp(cg_1, self.alpha, background_knowledge=background_knowledge)
-            cg_before = Meek.definite_meek(cg_2, background_knowledge=background_knowledge)
-            cg = Meek.meek(cg_before, background_knowledge=background_knowledge)
+                cg_2 = UCSepset.definite_maxp(
+                    cg_1, self.alpha, background_knowledge=background_knowledge
+                )
+            cg_before = Meek.definite_meek(
+                cg_2, background_knowledge=background_knowledge
+            )
+            cg = Meek.meek(
+                cg_before, background_knowledge=background_knowledge
+            )
         else:
             raise ValueError("uc_rule should be in [0, 1, 2]")
         self.cdag.cg = cg
         end = time.time()
         self.cdag.cg.PC_elapsed = end - start
-        print(f'Duration of algorithm was {self.cdag.cg.PC_elapsed}sec')
+        print(f"Duration of algorithm was {self.cdag.cg.PC_elapsed}sec")
 
-        return self.cdag.cg # Return CausalGraph of the CDAG
+        return self.cdag.cg  # Return CausalGraph of the CDAG
 
     def inter_cluster_phase(self, low_cluster, high_cluster):
         """
@@ -189,10 +221,10 @@ class ClustPC():
         """
         assert type(self.data) == np.ndarray
         assert 0 < self.alpha < 1
-        
+
         no_of_var = self.data.shape[1]
         # Check if all variables are in the graph
-        assert len(self.cdag.node_names) == no_of_var 
+        assert len(self.cdag.node_names) == no_of_var
 
         # self.cdag.cg.set_ind_test(self.indep_test)
 
@@ -200,34 +232,52 @@ class ClustPC():
 
         # Define the subgraph induced by the cluster nodes
         # Could be replaced by cdag.get_node_indices_of_cluster(cluster)
-        nodes_names_in_low_cluster = self.cdag.cluster_mapping[low_cluster.get_name()]
-        nodes_names_in_high_cluster = self.cdag.cluster_mapping[high_cluster.get_name()]
-        nodes_in_low_cluster = self.cdag.get_list_of_nodes_by_name(list_of_node_names= \
-                                                               nodes_names_in_low_cluster, \
-                                                                cg = self.cdag.cg)
-        nodes_in_high_cluster = self.cdag.get_list_of_nodes_by_name(list_of_node_names= \
-                                                               nodes_names_in_high_cluster, \
-                                                                cg = self.cdag.cg)
-        subgraph_cluster = CausalGraph(len(nodes_names_in_low_cluster) \
-                                      + len(nodes_names_in_high_cluster), \
-                                      nodes_names_in_low_cluster + nodes_names_in_high_cluster)
-        subgraph_cluster.G = self.cdag.subgraph(nodes_in_low_cluster + nodes_in_high_cluster)
+        nodes_names_in_low_cluster = self.cdag.cluster_mapping[
+            low_cluster.get_name()
+        ]
+        nodes_names_in_high_cluster = self.cdag.cluster_mapping[
+            high_cluster.get_name()
+        ]
+        nodes_in_low_cluster = self.cdag.get_list_of_nodes_by_name(
+            list_of_node_names=nodes_names_in_low_cluster, cg=self.cdag.cg
+        )
+        nodes_in_high_cluster = self.cdag.get_list_of_nodes_by_name(
+            list_of_node_names=nodes_names_in_high_cluster, cg=self.cdag.cg
+        )
+        subgraph_cluster = CausalGraph(
+            len(nodes_names_in_low_cluster) + len(nodes_names_in_high_cluster),
+            nodes_names_in_low_cluster + nodes_names_in_high_cluster,
+        )
+        subgraph_cluster.G = self.cdag.subgraph(
+            nodes_in_low_cluster + nodes_in_high_cluster
+        )
         # Collect the indices of nodes in subgraph and local_graph, w.r.t.
         # the entire adjacency matrix self.cdag.cg.G.graph
-        cluster_node_indices = np.array([self.cdag.cg.G.node_map[node] \
-                                    for node in subgraph_cluster.G.nodes])
+        cluster_node_indices = np.array(
+            [
+                self.cdag.cg.G.node_map[node]
+                for node in subgraph_cluster.G.nodes
+            ]
+        )
 
-        # Define the local graph which contains possible separating sets, here it is 
-        # low cluster union high cluster union low cluster parents 
+        # Define the local graph which contains possible separating sets, here it is
+        # low cluster union high cluster union low cluster parents
         # (high cluster is in low cluster parents per definition)
         local_graph = self.cdag.get_local_graph(low_cluster)
 
-        if self.verbose: print(f'Cluster node indices are {cluster_node_indices}')
-        local_graph_node_indices = np.array([self.cdag.cg.G.node_map[node] \
-                                        for node in local_graph.G.nodes])
-        if self.verbose: print(f'Local graph node indices are {cluster_node_indices}')
+        if self.verbose:
+            print(f"Cluster node indices are {cluster_node_indices}")
+        local_graph_node_indices = np.array(
+            [self.cdag.cg.G.node_map[node] for node in local_graph.G.nodes]
+        )
+        if self.verbose:
+            print(f"Local graph node indices are {cluster_node_indices}")
 
-        pbar = tqdm(total=cluster_node_indices.shape[0]) if self.show_progress else None
+        pbar = (
+            tqdm(total=cluster_node_indices.shape[0])
+            if self.show_progress
+            else None
+        )
         # pbar = pbar
 
         # Difference to local pc algorithm is that we consider only edges in the cluster
@@ -236,7 +286,11 @@ class ClustPC():
         # exceed nonchilds in cluster
 
         # Skeleton discovery
-        while self.cdag.max_nonchilds_of_cluster_nodes(low_cluster, local_graph) - 1 > depth:
+        while (
+            self.cdag.max_nonchilds_of_cluster_nodes(low_cluster, local_graph)
+            - 1
+            > depth
+        ):
             depth += 1
             edge_removal = []
             if self.show_progress:
@@ -245,54 +299,74 @@ class ClustPC():
                 if self.show_progress:
                     pbar.update()
                 if self.show_progress:
-                    pbar.set_description(f'Depth={depth}, working on node {x}')
-                # Get all neighbors of node_x in the cluster, format is integer values 
+                    pbar.set_description(f"Depth={depth}, working on node {x}")
+                # Get all neighbors of node_x in the cluster, format is integer values
                 # in adjacency matrix
                 Neigh_x = self.cdag.cg.neighbors(x)
                 # if self.verbose: print(f'Neighbors of {x} is {Neigh_x}')
                 # Remove neighbors that are not in cluster
                 cluster_mask = np.isin(Neigh_x, cluster_node_indices)
                 Neigh_x_in_clust = Neigh_x[cluster_mask]
-                if self.verbose: 
-                  print(f'Neighbors of {x} in ({low_cluster.get_name()},{high_cluster.get_name()}) are {Neigh_x_in_clust}')
+                if self.verbose:
+                    print(
+                        f"Neighbors of {x} in"
+                        f" ({low_cluster.get_name()},{high_cluster.get_name()})"
+                        f" are {Neigh_x_in_clust}"
+                    )
                 local_mask = np.isin(Neigh_x, local_graph_node_indices)
                 possible_blocking_nodes = Neigh_x[local_mask]
                 if len(possible_blocking_nodes) < depth - 1:
                     continue
                 for y in Neigh_x_in_clust:
                     if self.verbose:
-                        print('Testing edges from %d to %d' %(x, y))
+                        print("Testing edges from %d to %d" % (x, y))
                     # No other background knowledge functionality supported for now
                     # No parent checking for mns separation supported for now TODO
                     sepsets = set()
-                    Neigh_x_no_y = np.delete(possible_blocking_nodes, \
-                                             np.where(possible_blocking_nodes == y))
+                    Neigh_x_no_y = np.delete(
+                        possible_blocking_nodes,
+                        np.where(possible_blocking_nodes == y),
+                    )
                     for S in combinations(Neigh_x_no_y, depth):
                         # print(f'Set S to be tested is {S}')
                         p = self.cdag.cg.ci_test(x, y, S)
                         if p > self.alpha:
                             if self.verbose:
-                                print('%d ind %d | %s with p-value %f' % (x, y, S, p))
+                                print(
+                                    "%d ind %d | %s with p-value %f"
+                                    % (x, y, S, p)
+                                )
                             if not self.stable:
-                                edge1 = self.cdag.cg.G.get_edge(self.cdag.cg.G.nodes[x], \
-                                                                self.cdag.cg.G.nodes[y])
+                                edge1 = self.cdag.cg.G.get_edge(
+                                    self.cdag.cg.G.nodes[x],
+                                    self.cdag.cg.G.nodes[y],
+                                )
                                 if edge1 is not None:
                                     self.cdag.cg.G.remove_edge(edge1)
-                                edge2 = self.cdag.cg.G.get_edge(self.cdag.cg.G.nodes[y], \
-                                                                self.cdag.cg.G.nodes[x])
+                                edge2 = self.cdag.cg.G.get_edge(
+                                    self.cdag.cg.G.nodes[y],
+                                    self.cdag.cg.G.nodes[x],
+                                )
                                 if edge2 is not None:
                                     self.cdag.cg.G.remove_edge(edge2)
                                 append_value(self.cdag.cg.sepset, x, y, S)
                                 append_value(self.cdag.cg.sepset, y, x, S)
                                 break
                             else:
-                                edge_removal.append((x, y))  # after all conditioning sets at
-                                edge_removal.append((y, x))  # depth l have been considered
+                                edge_removal.append(
+                                    (x, y)
+                                )  # after all conditioning sets at
+                                edge_removal.append(
+                                    (y, x)
+                                )  # depth l have been considered
                                 for s in S:
                                     sepsets.add(s)
                         else:
                             if self.verbose:
-                                print('%d dep %d | %s with p-value %f' % (x, y, S, p))
+                                print(
+                                    "%d dep %d | %s with p-value %f"
+                                    % (x, y, S, p)
+                                )
                     # print(f'Added sepset: {x} !- {y} | {tuple(sepsets)}')
                     # print(f'Type of sepsets is {type(sepsets)}')
                     append_value(self.cdag.cg.sepset, x, y, tuple(sepsets))
@@ -300,14 +374,19 @@ class ClustPC():
             if self.show_progress:
                 pbar.refresh()
 
-            for (x, y) in list(set(edge_removal)):
-                edge1 = self.cdag.cg.G.get_edge(self.cdag.cg.G.nodes[x], \
-                                                self.cdag.cg.G.nodes[y])
+            for x, y in list(set(edge_removal)):
+                edge1 = self.cdag.cg.G.get_edge(
+                    self.cdag.cg.G.nodes[x], self.cdag.cg.G.nodes[y]
+                )
                 if edge1 is not None:
                     self.cdag.cg.G.remove_edge(edge1)
-                    x_name = self.cdag.get_key_by_value(self.cdag.cg.G.node_map, x)
-                    y_name = self.cdag.get_key_by_value(self.cdag.cg.G.node_map, y)
-                    print(f'Deleted edge from {x_name} to {y_name}')
+                    x_name = self.cdag.get_key_by_value(
+                        self.cdag.cg.G.node_map, x
+                    )
+                    y_name = self.cdag.get_key_by_value(
+                        self.cdag.cg.G.node_map, y
+                    )
+                    print(f"Deleted edge from {x_name} to {y_name}")
             local_graph = self.cdag.get_local_graph(low_cluster)
             # print('LOCAL GRAPH DRAWN BELOW')
             # local_graph.draw_pydot_graph()
@@ -322,15 +401,15 @@ class ClustPC():
         """
         Runs the intra-cluster phase of the ClustPC algorithm for a given cluster.
         Adapted from causallearn pc algorithm.
-        Updates self.cdag.cg each step. 
+        Updates self.cdag.cg each step.
         Input: cluster, a node object of CausalGraph
         """
         assert type(self.data) == np.ndarray
         assert 0 < self.alpha < 1
-        
+
         no_of_var = self.data.shape[1]
         # Check if all variables are in the graph
-        assert len(self.cdag.node_names) == no_of_var 
+        assert len(self.cdag.node_names) == no_of_var
 
         # self.cdag.cg.set_ind_test(self.indep_test)
 
@@ -338,27 +417,40 @@ class ClustPC():
 
         # Collect relevant nodes, i.e. cluster and parents of cluster in a list of Node objects
 
-        # Define the subgraph induced by the cluster nodes 
+        # Define the subgraph induced by the cluster nodes
         # Could be replaced by cdag.get_node_indices_of_cluster(cluster)
         nodes_names_in_cluster = self.cdag.cluster_mapping[cluster.get_name()]
-        nodes_in_cluster = self.cdag.get_list_of_nodes_by_name(list_of_node_names= \
-                                                               nodes_names_in_cluster, \
-                                                                cg = self.cdag.cg)
-        subgraph_cluster = CausalGraph(len(nodes_names_in_cluster), nodes_names_in_cluster)
+        nodes_in_cluster = self.cdag.get_list_of_nodes_by_name(
+            list_of_node_names=nodes_names_in_cluster, cg=self.cdag.cg
+        )
+        subgraph_cluster = CausalGraph(
+            len(nodes_names_in_cluster), nodes_names_in_cluster
+        )
         subgraph_cluster.G = self.cdag.subgraph(nodes_in_cluster)
-        cluster_node_indices = np.array([self.cdag.cg.G.node_map[node] \
-                                    for node in subgraph_cluster.G.nodes])
+        cluster_node_indices = np.array(
+            [
+                self.cdag.cg.G.node_map[node]
+                for node in subgraph_cluster.G.nodes
+            ]
+        )
 
         # Define the local graph which contains possible separating sets
         local_graph = self.cdag.get_local_graph(cluster)
-        # Possibly replace subgraph_cluster and local_graph by index_arrays, 
+        # Possibly replace subgraph_cluster and local_graph by index_arrays,
         # as have to operate on entire adjacency matrix and data matrix
-        if self.verbose: print(f'Cluster node indices are {cluster_node_indices}')
-        local_graph_node_indices = np.array([self.cdag.cg.G.node_map[node] \
-                                        for node in local_graph.G.nodes])
-        if self.verbose: print(f'Local graph node indices are {cluster_node_indices}')
+        if self.verbose:
+            print(f"Cluster node indices are {cluster_node_indices}")
+        local_graph_node_indices = np.array(
+            [self.cdag.cg.G.node_map[node] for node in local_graph.G.nodes]
+        )
+        if self.verbose:
+            print(f"Local graph node indices are {cluster_node_indices}")
 
-        pbar = tqdm(total=cluster_node_indices.shape[0]) if self.show_progress else None
+        pbar = (
+            tqdm(total=cluster_node_indices.shape[0])
+            if self.show_progress
+            else None
+        )
         # pbar = pbar
 
         # Difference to local pc algorithm is that we consider only edges in the cluster
@@ -367,7 +459,10 @@ class ClustPC():
         # exceed nonchilds in cluster
 
         # Skeleton discovery
-        while self.cdag.max_nonchilds_of_cluster_nodes(cluster, local_graph) - 1 > depth:
+        while (
+            self.cdag.max_nonchilds_of_cluster_nodes(cluster, local_graph) - 1
+            > depth
+        ):
             depth += 1
             edge_removal = []
             if self.show_progress:
@@ -376,16 +471,19 @@ class ClustPC():
                 if self.show_progress:
                     pbar.update()
                 if self.show_progress:
-                    pbar.set_description(f'Depth={depth}, working on node {x}')
+                    pbar.set_description(f"Depth={depth}, working on node {x}")
                 # Get all neighbors of node_x in the cluster, is integer values in adjacency matrix
                 Neigh_x = self.cdag.cg.neighbors(x)
                 # if self.verbose: print(f'Neigh_x is {Neigh_x}')
                 # Remove neighbors that are not in cluster
                 cluster_mask = np.isin(Neigh_x, cluster_node_indices)
                 Neigh_x_in_clust = Neigh_x[cluster_mask]
-                if self.verbose: 
-                  print(f'Neighbors of {x} in {cluster.get_name()} are {Neigh_x_in_clust}')
-                # Possible blocking nodes are 
+                if self.verbose:
+                    print(
+                        f"Neighbors of {x} in {cluster.get_name()} are"
+                        f" {Neigh_x_in_clust}"
+                    )
+                # Possible blocking nodes are
                 local_mask = np.isin(Neigh_x, local_graph_node_indices)
                 possible_blocking_nodes = Neigh_x[local_mask]
                 # print(f'Possible blocking nodes are {possible_blocking_nodes}')
@@ -393,37 +491,53 @@ class ClustPC():
                     continue
                 for y in Neigh_x_in_clust:
                     if self.verbose:
-                        print('Testing edges from %d to %d' %(x, y))
+                        print("Testing edges from %d to %d" % (x, y))
                     # No other background functionality supported for now
                     # No parent checking for mns separation supported for now TODO
                     sepsets = set()
-                    Neigh_x_no_y = np.delete(possible_blocking_nodes, \
-                                             np.where(possible_blocking_nodes == y))
+                    Neigh_x_no_y = np.delete(
+                        possible_blocking_nodes,
+                        np.where(possible_blocking_nodes == y),
+                    )
                     for S in combinations(Neigh_x_no_y, depth):
                         p = self.cdag.cg.ci_test(x, y, S)
                         if p > self.alpha:
                             if self.verbose:
-                                print('%d ind %d | %s with p-value %f' % (x, y, S, p))
+                                print(
+                                    "%d ind %d | %s with p-value %f"
+                                    % (x, y, S, p)
+                                )
                             if not self.stable:
-                                edge1 = self.cdag.cg.G.get_edge(self.cdag.cg.G.nodes[x], \
-                                                                self.cdag.cg.G.nodes[y])
+                                edge1 = self.cdag.cg.G.get_edge(
+                                    self.cdag.cg.G.nodes[x],
+                                    self.cdag.cg.G.nodes[y],
+                                )
                                 if edge1 is not None:
                                     self.cdag.cg.G.remove_edge(edge1)
-                                edge2 = self.cdag.cg.G.get_edge(self.cdag.cg.G.nodes[y], \
-                                                                self.cdag.cg.G.nodes[x])
+                                edge2 = self.cdag.cg.G.get_edge(
+                                    self.cdag.cg.G.nodes[y],
+                                    self.cdag.cg.G.nodes[x],
+                                )
                                 if edge2 is not None:
                                     self.cdag.cg.G.remove_edge(edge2)
                                 append_value(self.cdag.cg.sepset, x, y, S)
                                 append_value(self.cdag.cg.sepset, y, x, S)
                                 break
                             else:
-                                edge_removal.append((x, y))  # after all conditioning sets at
-                                edge_removal.append((y, x))  # depth l have been considered
+                                edge_removal.append(
+                                    (x, y)
+                                )  # after all conditioning sets at
+                                edge_removal.append(
+                                    (y, x)
+                                )  # depth l have been considered
                                 for s in S:
                                     sepsets.add(s)
                         else:
                             if self.verbose:
-                                print('%d dep %d | %s with p-value %f' % (x, y, S, p))
+                                print(
+                                    "%d dep %d | %s with p-value %f"
+                                    % (x, y, S, p)
+                                )
                     # print(f'Added sepset: {x} !- {y} | {tuple(sepsets)}')
                     # print(f'Type of sepsets is {type(sepsets)}')
                     append_value(self.cdag.cg.sepset, x, y, tuple(sepsets))
@@ -431,12 +545,13 @@ class ClustPC():
             if self.show_progress:
                 pbar.refresh()
 
-            for (x, y) in list(set(edge_removal)):
-                edge1 = self.cdag.cg.G.get_edge(self.cdag.cg.G.nodes[x], \
-                                                self.cdag.cg.G.nodes[y])
+            for x, y in list(set(edge_removal)):
+                edge1 = self.cdag.cg.G.get_edge(
+                    self.cdag.cg.G.nodes[x], self.cdag.cg.G.nodes[y]
+                )
                 if edge1 is not None:
                     self.cdag.cg.G.remove_edge(edge1)
-                    print(f'Deleted edge from {x} to {y}')
+                    print(f"Deleted edge from {x} to {y}")
             # Update local graph to reflect edge deletions that were just done
             local_graph = self.cdag.get_local_graph(cluster)
             # print('LOCAL GRAPH DRAWN BELOW')
@@ -447,15 +562,3 @@ class ClustPC():
 
         # TODO Orientation rules
         return self.cdag.cg
-
-
-
-
-
-            
-
-
-
-
-
-

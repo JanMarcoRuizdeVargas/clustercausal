@@ -6,6 +6,7 @@ import castle
 
 from clustcausal.clusterdag.cluster_dag import CDAG
 
-class Benchmarker():
+
+class Benchmarker:
     def __init__(self):
         pass

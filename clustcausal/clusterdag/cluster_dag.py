@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import networkx as nx
 import causallearn
+
 # import castle
 import pydot
 import logging
@@ -14,7 +15,8 @@ from causallearn.graph.GraphNode import GraphNode
 from causallearn.graph.Node import Node
 from causallearn.graph.GeneralGraph import GeneralGraph
 
-logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+
 
 class CDAG:
     """
@@ -27,22 +29,22 @@ class CDAG:
         background_knowledge: BackgroundKnowledge object
         node_names: list of node names
         node_indices: dictionary that points to which cluster the node is in
-    
+
     methods:
         cdag_to_mpdag: constructs a MPDAG from a CDAG
 
     """
-    def __init__(self, cluster_mapping: dict, 
-        cluster_edges: list):
+
+    def __init__(self, cluster_mapping: dict, cluster_edges: list):
         """
         Construct a CDAG object from a cluster dictionary
-        The CDAG is stored as a dictionary. 
-        The cluster_nodes are stored as a dictionary pointing 
-        to a list of cluster members. 
+        The CDAG is stored as a dictionary.
+        The cluster_nodes are stored as a dictionary pointing
+        to a list of cluster members.
         The cluster_edges are stored as a list of tuples.
         An example CDAG:
             cdag.cluster_mapping= {'C1':['X1','X2','X3'], 'C2': ['X4','X5']}
-            cdag.cluster_edges = [('C1','C2')] 
+            cdag.cluster_edges = [('C1','C2')]
             cdag.cg = CausalGraphObject
             cdag.cluster_graph = CausalGraphObject of clusters
         """
@@ -51,13 +53,17 @@ class CDAG:
         self.node_names = []
         for cluster in self.cluster_mapping:
             self.node_names.extend(self.cluster_mapping[cluster])
-        self.node_indices = {} # Dictionary that points to which cluster the node is in
+        self.node_indices = (
+            {}
+        )  # Dictionary that points to which cluster the node is in
         for node in self.node_names:
             for cluster, vertice in self.cluster_mapping.items():
                 if node in vertice:
                     self.node_indices[node] = cluster
-        self.cluster_graph = CausalGraph(no_of_var = len(self.cluster_mapping),
-                                node_names = list(self.cluster_mapping.keys()))
+        self.cluster_graph = CausalGraph(
+            no_of_var=len(self.cluster_mapping),
+            node_names=list(self.cluster_mapping.keys()),
+        )
         for edge in self.cluster_graph.G.get_graph_edges():
             cluster1 = edge.get_node1()
             cluster2 = edge.get_node2()
@@ -66,21 +72,27 @@ class CDAG:
             if cluster1 != cluster2:
                 if (cluster1_name, cluster2_name) not in self.cluster_edges:
                     self.cluster_graph.G.remove_edge(edge)
-                    logging.info(f'removed edge: ({cluster1.get_name()},{cluster2.get_name()})')
+                    logging.info(
+                        "removed edge:"
+                        f" ({cluster1.get_name()},{cluster2.get_name()})"
+                    )
                 if (cluster1_name, cluster2_name) in self.cluster_edges:
                     self.cluster_graph.G.remove_edge(edge)
                     self.cluster_graph.G.add_directed_edge(cluster1, cluster2)
-                    logging.info(f'oriented edge: ({cluster1.get_name()},{cluster2.get_name()})')
-        
+                    logging.info(
+                        "oriented edge:"
+                        f" ({cluster1.get_name()},{cluster2.get_name()})"
+                    )
 
     def cdag_to_mpdag(self) -> CausalGraph:
         """
         Constructs a MPDAG from a CDAG and stores it in a causallearn
-        BackgroundKnowledge object. 
+        BackgroundKnowledge object.
         """
         # Create the list of node_names needed for CausalGraph
-        self.cg = CausalGraph(no_of_var = len(self.node_names), 
-                                                      node_names = self.node_names)
+        self.cg = CausalGraph(
+            no_of_var=len(self.node_names), node_names=self.node_names
+        )
         # Remove edges that are forbidden by the CDAG
         # self.background_knowledge = BackgroundKnowledge()
         for edge in self.cg.G.get_graph_edges():
@@ -92,11 +104,17 @@ class CDAG:
             if cluster1 != cluster2:
                 if (cluster1, cluster2) not in self.cluster_edges:
                     self.cg.G.remove_edge(edge)
-                    logging.info(f'removed edge: ({node1.get_name()},{node2.get_name()})')
+                    logging.info(
+                        "removed edge:"
+                        f" ({node1.get_name()},{node2.get_name()})"
+                    )
                 if (cluster1, cluster2) in self.cluster_edges:
                     self.cg.G.remove_edge(edge)
                     self.cg.G.add_directed_edge(node1, node2)
-                    logging.info(f'oriented edge: ({node1.get_name()},{node2.get_name()})')
+                    logging.info(
+                        "oriented edge:"
+                        f" ({node1.get_name()},{node2.get_name()})"
+                    )
         return self.cg
 
     def draw_mpdag(self):
@@ -114,9 +132,9 @@ class CDAG:
     def get_cluster_topological_ordering(self) -> list:
         """
         Calculates a topological ordering of the CDAG
-        and saves it to self.cdag_topological_sort and 
+        and saves it to self.cdag_topological_sort and
         self.cdag_list_of_topological_sort
-        Returns: 
+        Returns:
         list of node names
         """
         nx_helper_graph = nx.DiGraph()
@@ -125,17 +143,18 @@ class CDAG:
         self.cdag_list_of_topological_sort = list(topological_generator)
         if len(self.cdag_list_of_topological_sort) == 0:
             # If only one cluster, nx doesn't return a list containing only the cluster
-            self.cdag_list_of_topological_sort = list(self.cluster_mapping.keys())
+            self.cdag_list_of_topological_sort = list(
+                self.cluster_mapping.keys()
+            )
             return list(self.cluster_mapping.keys())
         return self.cdag_list_of_topological_sort
-    
 
     def get_parents_plus(self, cluster):
         """
         Gets the pa+ set of a cluster, i.e. the cluster union the parents
         Parameters:
         cluster (Node object in the CausalGraph instance cdag.cluster_graph
-        Returns: 
+        Returns:
         Tuple of two lists: (relevant_clusters, relevant_nodes)
         relevant_clusters is list of Node objects in cdag.cluster_graph
         relevant_nodes is list of Node objects in cdag.cg
@@ -145,7 +164,9 @@ class CDAG:
         cluster_name = cluster.get_name()
         names_of_relevant_nodes = []
         for clust in relevant_clusters:
-            names_of_relevant_nodes.extend(self.cluster_mapping[clust.get_name()])
+            names_of_relevant_nodes.extend(
+                self.cluster_mapping[clust.get_name()]
+            )
         relevant_nodes = []
         for node_name in names_of_relevant_nodes:
             relevant_nodes.append(self.get_node_by_name(node_name, self.cg))
@@ -161,19 +182,20 @@ class CDAG:
         A CausalGraph object, where I replaced CausalGraph.G with a subgraph
         (GeneralGraph) object, restricted to the relevant nodes (cluster union parents)
         """
-        _ , relevant_nodes = self.get_parents_plus(cluster)
+        _, relevant_nodes = self.get_parents_plus(cluster)
         relevant_node_names = []
         for node in relevant_nodes:
             relevant_node_names.append(node.get_name())
 
-        local_graph = CausalGraph(no_of_var = len(relevant_nodes), \
-                                                        node_names = relevant_node_names)
-        
-        # local_graph = CausalGraph(no_of_var = len(relevant_nodes), 
+        local_graph = CausalGraph(
+            no_of_var=len(relevant_nodes), node_names=relevant_node_names
+        )
+
+        # local_graph = CausalGraph(no_of_var = len(relevant_nodes),
         #                                               node_names = relevant_node_names)
         local_graph.G = self.subgraph(relevant_nodes)
         return local_graph
-    
+
     def subgraph(self, nodes: List[Node]):
         """
         Returns a subgraph, where the nodes are the ones in the list nodes
@@ -185,7 +207,7 @@ class CDAG:
         ndarray of shape (len(nodes), len(nodes)), the adjacency matrix of the subgraph
         """
         # Put nodes into self.cg.G.node_map order
-        nodes = sorted(nodes, key = lambda node: self.cg.G.node_map[node])
+        nodes = sorted(nodes, key=lambda node: self.cg.G.node_map[node])
 
         subgraph = GeneralGraph(nodes)
 
@@ -197,19 +219,21 @@ class CDAG:
             if not (self.cg.G.nodes[i] in nodes):
                 nodes_to_delete.append(i)
 
-        graph = np.delete(graph, nodes_to_delete, axis = 0)
-        graph = np.delete(graph, nodes_to_delete, axis = 1)
+        graph = np.delete(graph, nodes_to_delete, axis=0)
+        graph = np.delete(graph, nodes_to_delete, axis=1)
 
         subgraph.graph = graph
         subgraph.reconstitute_dpath(subgraph.get_graph_edges())
 
         return subgraph
-    
-    def max_nonchilds_of_cluster_nodes(self, cluster, graph_to_use: CausalGraph):
+
+    def max_nonchilds_of_cluster_nodes(
+        self, cluster, graph_to_use: CausalGraph
+    ):
         """
         Returns the maximum degree of the nodes in the cluster in the
         local graph, which includes parents of the cluster.
-        Needed for stopping depth of PC algorithm. 
+        Needed for stopping depth of PC algorithm.
         Parameters:
         cluster (Node object in the CausalGraph instance cdag.cluster_graph)
         graph_to_use (CausalGraph object)
@@ -224,22 +248,25 @@ class CDAG:
             if deg > max_degree:
                 max_degree = deg
         return max_degree
-    
+
     def get_node_indices_of_cluster(self, cluster):
-        '''
+        """
         Takes in a cluster and returns the node indices in the adjacency matrix
         self.cg.node_map
-        '''
+        """
         nodes_names_in_cluster = self.cluster_mapping[cluster.get_name()]
-        nodes_in_cluster = self.get_list_of_nodes_by_name(list_of_node_names= \
-                                                               nodes_names_in_cluster, \
-                                                                cg = self.cg)
-        subgraph_cluster = CausalGraph(len(nodes_names_in_cluster), nodes_names_in_cluster)
+        nodes_in_cluster = self.get_list_of_nodes_by_name(
+            list_of_node_names=nodes_names_in_cluster, cg=self.cg
+        )
+        subgraph_cluster = CausalGraph(
+            len(nodes_names_in_cluster), nodes_names_in_cluster
+        )
         subgraph_cluster.G = self.subgraph(nodes_in_cluster)
-        cluster_node_indices = np.array([self.cg.G.node_map[node] \
-                                    for node in subgraph_cluster.G.nodes])
+        cluster_node_indices = np.array(
+            [self.cg.G.node_map[node] for node in subgraph_cluster.G.nodes]
+        )
         return cluster_node_indices
-    
+
     @staticmethod
     def get_node_by_name(node_name, cg: CausalGraph):
         """
@@ -253,11 +280,11 @@ class CDAG:
         for node in cg.G.nodes:
             if node.get_name() == node_name:
                 return node
-            
+
     @staticmethod
     def get_list_of_nodes_by_name(list_of_node_names, cg: CausalGraph):
         """
-        Helper function to get list of Node objects from list of node_names 
+        Helper function to get list of Node objects from list of node_names
         regarding GraphNode object
         Parameters:
         list_of_node_names (list of strings)
@@ -269,7 +296,7 @@ class CDAG:
         for node_name in list_of_node_names:
             list_of_nodes.append(CDAG.get_node_by_name(node_name, cg))
         return list_of_nodes
-    
+
     @staticmethod
     def get_node_names_from_list(list_of_nodes):
         """
@@ -287,7 +314,6 @@ class CDAG:
             if val == value:
                 return key
         return None  # Value not found in the dictionary
-    
 
     def cdag_from_background_knowledge(self):
         """
