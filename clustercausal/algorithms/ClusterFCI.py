@@ -88,7 +88,27 @@ class ClusterFCI:
             node_to_global_indice = cdag.cg.G.node_map  # Dict: Node -> int
             local_graph = cdag.get_local_graph(cluster)
             # map global_indices to local_indices
-            global_indices_to_local_indices = {}
+            global_graph = cdag.cg
+            global_indices_to_local_indices = (
+                ClusterDAG.make_mapping_global_to_local_indices(
+                    global_graph, local_graph
+                )
+            )
+            local_indices_to_global_indices = (
+                ClusterDAG.make_mapping_local_to_global_indices(
+                    global_graph, local_graph
+                )
+            )
+            # global_indice_to_local_indice = {}
+            # for node in self.cdag.cg.G.nodes:
+            #     global_indice = self.cdag.cg.G.node_map[node]
+            #     local_indice = local_graph.G.node_map[node]
+            #     global_indice_to_local_indice[global_indice] = local_indice
+            # local_indice_to_global_indice = {}
+            # for global_indice in list(global_indice_to_local_indice.keys()):
+            #     local_indice = global_indice_to_local_indice[global_indice]
+            #     local_indice_to_global_indice[local_indice] = global_indice
+
             # for node in local_graph.
 
             # run FCI in local graph

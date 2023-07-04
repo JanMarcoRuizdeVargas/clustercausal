@@ -1,3 +1,5 @@
 mthesis
 .vscode
 __pycache__
+launch.json
+.pytest_cache

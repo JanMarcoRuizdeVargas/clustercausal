@@ -149,7 +149,7 @@ class ClusterDAG:
             return list(self.cluster_mapping.keys())
         return self.cdag_list_of_topological_sort
 
-    def get_parents_plus(self, cluster):
+    def get_parents_plus(self, cluster: Node) -> tuple:
         """
         Gets the pa+ set of a cluster, i.e. the cluster union the parents
         Parameters:
@@ -172,14 +172,14 @@ class ClusterDAG:
             relevant_nodes.append(self.get_node_by_name(node_name, self.cg))
         return relevant_clusters, relevant_nodes
 
-    def get_local_graph(self, cluster):
+    def get_local_graph(self, cluster: Node) -> CausalGraph:
         """
         Define the local graph on which to run the intra cluster phase, restrict data
         to cluster union parents of cluster
         Parameters:
         cluster (Node object in the CausalGraph instance cdag.cluster_graph
         Returns:
-        A CausalGraph object, where I replaced CausalGraph.G with a subgraph
+        A CausalGraph object, where CausalGraph.G is replaced with a subgraph
         (GeneralGraph) object, restricted to the relevant nodes (cluster union parents)
         """
         _, relevant_nodes = self.get_parents_plus(cluster)
@@ -196,7 +196,7 @@ class ClusterDAG:
         local_graph.G = self.subgraph(relevant_nodes)
         return local_graph
 
-    def subgraph(self, nodes: List[Node]):
+    def subgraph(self, nodes: List[Node]) -> GeneralGraph:
         """
         Returns a subgraph, where the nodes are the ones in the list nodes
         Adapted from causallearn.graph.GeneralGraph.subgraph, but theirs was bugged
@@ -227,9 +227,47 @@ class ClusterDAG:
 
         return subgraph
 
+    @staticmethod
+    def make_mapping_local_to_global_indices(
+        global_graph: CausalGraph, local_graph: CausalGraph
+    ) -> dict:
+        """
+        Makes a mapping from local indices to global indices
+        Parameters:
+        global_graph (CausalGraph object)
+        local_graph (CausalGraph object)
+        Returns:
+        Dictionary with keys local indices and values global indices
+        """
+        local_indice_to_global_indice = {}
+        for node in local_graph.G.nodes:
+            global_indice = global_graph.G.node_map[node]
+            local_indice = local_graph.G.node_map[node]
+            local_indice_to_global_indice[local_indice] = global_indice
+        return local_indice_to_global_indice
+
+    @staticmethod
+    def make_mapping_global_to_local_indices(
+        global_graph: CausalGraph, local_graph: CausalGraph
+    ) -> dict:
+        """
+        Makes a mapping from global indices to local indices
+        Parameters:
+        global_graph (CausalGraph object)
+        local_graph (CausalGraph object)
+        Returns:
+        Dictionary with keys global indices and values local indices
+        """
+        global_indice_to_local_indice = {}
+        for node in global_graph.G.nodes:
+            global_indice = global_graph.G.node_map[node]
+            local_indice = local_graph.G.node_map[node]
+            global_indice_to_local_indice[global_indice] = local_indice
+        return global_indice_to_local_indice
+
     def max_nonchilds_of_cluster_nodes(
-        self, cluster, graph_to_use: CausalGraph
-    ):
+        self, cluster: Node, graph_to_use: CausalGraph
+    ) -> int:
         """
         Returns the maximum degree of the nodes in the cluster in the
         local graph, which includes parents of the cluster.
@@ -294,13 +332,13 @@ class ClusterDAG:
         """
         list_of_nodes = []
         for node_name in list_of_node_names:
-            list_of_nodes.append(CDAG.get_node_by_name(node_name, cg))
+            list_of_nodes.append(ClusterDAG.get_node_by_name(node_name, cg))
         return list_of_nodes
 
     @staticmethod
     def get_node_names_from_list(list_of_nodes):
         """
-        Helper function to get list node names from list of Node objects
+        Helper function to get list of node names from list of Node objects
         """
         node_names = []
         for node in list_of_nodes:
