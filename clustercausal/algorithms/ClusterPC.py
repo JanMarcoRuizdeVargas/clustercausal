@@ -25,12 +25,12 @@ from causallearn.utils.PCUtils.BackgroundKnowledgeOrientUtils import (
 )
 from causallearn.search.ConstraintBased.PC import pc, pc_alg
 
-from clustcausal.clusterdag.cluster_dag import CDAG
+from clustercausal.clusterdag.ClusterDAG import ClusterDAG
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
 
-class ClustPC:
+class ClusterPC:
     """
     Runs the ClustPC algorithm according to my master thesis.
     Adapted from causallearn pc algorithm.
@@ -39,7 +39,7 @@ class ClustPC:
 
     def __init__(
         self,
-        cdag: CDAG,
+        cdag: ClusterDAG,
         data: ndarray,
         alpha: float,
         indep_test: str = "fisherz",

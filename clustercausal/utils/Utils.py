@@ -1,14 +1,14 @@
 import numpy as np
 import random
 import causallearn
-from clustcausal.clusterdag.cluster_dag import CDAG
+from clustercausal.clusterdag.ClusterDAG import ClusterDAG
 
 
 def draw_graph(nodes, edges):
     artificial_mapping = {}
     for node_name in nodes:
         artificial_mapping[node_name] = [node_name]
-    cdag = CDAG(artificial_mapping, edges)
+    cdag = ClusterDAG(artificial_mapping, edges)
     cdag.cluster_graph.draw_pydot_graph()
 
 

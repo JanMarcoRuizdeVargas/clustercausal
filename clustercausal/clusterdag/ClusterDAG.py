@@ -18,7 +18,7 @@ from causallearn.graph.GeneralGraph import GeneralGraph
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
 
-class CDAG:
+class ClusterDAG:
     """
     Class for functionality regarding CDAGS
 

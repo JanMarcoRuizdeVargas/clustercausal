@@ -17,13 +17,13 @@ from causallearn.utils.Fas import fas
 from causallearn.utils.PCUtils.BackgroundKnowledge import BackgroundKnowledge
 from causallearn.search.ConstraintBased.FCI import *
 
-from clustcausal.clusterdag.cluster_dag import CDAG
+from clustercausal.clusterdag.ClusterDAG import ClusterDAG
 
 
-class ClustFCI:
+class ClusterFCI:
     def __init__(
         self,
-        cdag: CDAG,
+        cdag: ClusterDAG,
         data: ndarray,
         alpha: float,
         indep_test: str = "fisherz",
@@ -78,12 +78,18 @@ class ClustFCI:
             print(f"\nIntra phase in cluster {cluster.get_name()}")
             self.intra_cluster_phase(cluster)
 
-        def inter_cluster_phase(cluster, parent):
+        def inter_cluster_phase(
+            cluster, parent, cdag=self.cdag, data=self.data
+        ):
             pass
             # Restrict to local graph
-
+            cdag = cdag
+            data = self.data
+            node_to_global_indice = cdag.cg.G.node_map  # Dict: Node -> int
+            local_graph = cdag.get_local_graph(cluster)
             # map global_indices to local_indices
             global_indices_to_local_indices = {}
+            # for node in local_graph.
 
             # run FCI in local graph
 
