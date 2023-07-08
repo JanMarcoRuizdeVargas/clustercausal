@@ -84,6 +84,15 @@ class ClusterDAG:
                         f" ({cluster1.get_name()},{cluster2.get_name()})"
                     )
 
+    def cdag_to_pag(self, forbidden_latent_edges: list):
+        """
+        If a C-DAG with latent variables is wanted, this function
+        adds the latent edges to the cluster graph.
+        TODO
+        """
+        for edge in forbidden_latent_edges:
+            self.cluster_graph.G.add_directed_edge(edge[0], edge[1])
+
     def cdag_to_mpdag(self) -> CausalGraph:
         """
         Constructs a MPDAG from a CDAG and stores it in a causallearn

@@ -79,12 +79,26 @@ class ClusterFCI:
             self.intra_cluster_phase(cluster)
 
         def inter_cluster_phase(
-            cluster, parent, cdag=self.cdag, data=self.data
+            cluster,
+            parent,
+            cdag=self.cdag,
+            dataset: ndarray = self.data,
+            independence_test_method: str = fisherz,
+            alpha: float = 0.05,
+            depth: int = -1,
+            max_path_length: int = -1,
+            verbose: bool = False,
+            background_knowledge: BackgroundKnowledge | None = None,
+            **kwargs,
         ):
-            pass
+            """
+            Runs the inter cluster phase of the C-FCI algorithm.
+            TODO
+            """
+
             # Restrict to local graph
             cdag = cdag
-            data = self.data
+            dataset = self.data
             node_to_global_indice = cdag.cg.G.node_map  # Dict: Node -> int
             local_graph = cdag.get_local_graph(cluster)
             # map global_indices to local_indices
@@ -108,6 +122,22 @@ class ClusterFCI:
             # for global_indice in list(global_indice_to_local_indice.keys()):
             #     local_indice = global_indice_to_local_indice[global_indice]
             #     local_indice_to_global_indice[local_indice] = global_indice
+
+            # restrict data array via local graph
+            local_data = dataset[
+                :, list(local_indices_to_global_indices.keys())
+            ]
+            local_graph.G, sep_sets = fas(
+                data=local_data,
+                nodes=local_graph.G.nodes,
+                independence_test_method=self.cdag.cg.test,
+                alpha=self.alpha,
+                knowledge=self.background_knowledge,
+                depth=-1,
+                verbose=self.verbose,
+                stable=self.stable,
+                show_progress=self.show_progress,
+            )
 
             # for node in local_graph.
 
