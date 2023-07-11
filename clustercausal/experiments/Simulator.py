@@ -1,6 +1,8 @@
 import causallearn
 import castle
 
+from causallearn.graph.GraphClass import CausalGraph
+
 from castle.datasets.simulator import IIDSimulation, DAG
 
 
@@ -9,21 +11,34 @@ class Simulator:
     A simulator to generate a causal graph and data from it.
     """
 
-    def __init__(
+    def __init__(self):
+        """
+        Initialize an instance
+        """
+        pass
+
+    def run(
         self,
         true_dag,
-        no_of_nodes,
-        no_of_edges,
+        n_nodes,
+        n_edges,
+        method,
+        weight_range,
         distribution_type,
         sample_size,
         seed,
+        noise_scale=1.0,
     ):
         """
-        Initialize number of nodes and edges in the causal graph
+        Run a simulation
         """
         if true_dag is None:
-            true_dag = self.generate_dag(no_of_nodes, no_of_edges, seed)
-        data = self.generate_data(true_dag, distribution_type, sample_size)
+            true_dag = self.generate_dag(
+                n_nodes, n_edges, method, weight_range, seed
+            )
+        data = self.generate_data(
+            true_dag, sample_size, method, distribution_type, noise_scale
+        )
         return true_dag, data
 
     def generate_dag(
@@ -66,11 +81,20 @@ class Simulator:
                 n_nodes, n_edges, weight_range=weight_range, seed=seed
             )
         # for weighted adjacency matrix W create CausalGraph object
-        # TODO
-        # For getting CPDAG/PAG use causallearn
-        return dag
+        true_dag = CausalGraph(no_of_var=W.shape[0])
+        true_dag.adjacency_matrix = W
+        for i in range(W.shape[0]):
+            for j in range(W.shape[1]):
+                if W[i, j] != 0:
+                    # Make tail at i and arrow at j
+                    true_dag.G.graph[i, j] = -1
+                    true_dag.G.graph[j, i] = 1
 
-    def generate_data(self, true_dag, distribution_type, sample_size):
+        return true_dag
+
+    def generate_data(
+        self, true_dag, sample_size, method, distribution_type, noise_scale
+    ):
         """
         Generate data from the causal graph
         Arguments:
@@ -80,5 +104,13 @@ class Simulator:
         Output:
             data: sample_size x no_of_nodes ndarray
         """
-        data = None
-        return data
+        if true_dag.adjacency_matrix is None:
+            raise ValueError("Adjacency matrix is None")
+        dataset = IIDSimulation(
+            true_dag.adjacency_matrix,
+            n=sample_size,
+            method=method,
+            sem_type=distribution_type,
+            noise_scale=noise_scale,
+        )
+        return dataset.X
