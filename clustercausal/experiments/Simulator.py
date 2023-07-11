@@ -1,5 +1,7 @@
 import causallearn
-import gCastle
+import castle
+
+from castle.datasets.simulator import IIDSimulation, DAG
 
 
 class Simulator:
@@ -24,17 +26,47 @@ class Simulator:
         data = self.generate_data(true_dag, distribution_type, sample_size)
         return true_dag, data
 
-    def generate_dag(self, no_of_nodes, no_of_edges, seed):
+    def generate_dag(
+        self,
+        n_nodes,
+        n_edges,
+        method="erdos_renyi",
+        weight_range=(-1, 2),
+        seed=42,
+    ):
         """
-        Generate a random causal graph
+        Generate a random DAG with gcastle
         Arguments:
-            no_of_nodes: number of nodes in the causal graph
-            no_of_edges: number of edges in the causal graph
+            n_nodes: number of nodes in the causal graph
+            n_edges: number of edges in the causal graph
+            method: method to generate the causal graph]
+                    methods supported: erdos_renyi, scale_free, bipartite, hierarchical, low_rank
             seed: seed for the random number generator
         Output:
             A CausalGraph object
         """
-        dag = None
+        if method == "erdos_renyi":
+            W = DAG.erdos_renyi(
+                n_nodes, n_edges, weight_range=weight_range, seed=seed
+            )
+        elif method == "scale_free":
+            W = DAG.scale_free(
+                n_nodes, n_edges, weight_range=weight_range, seed=seed
+            )
+        elif method == "bipartite":
+            W = DAG.bipartite(
+                n_nodes, n_edges, weight_range=weight_range, seed=seed
+            )
+        elif method == "hierarchical":
+            W = DAG.hierarchical(
+                n_nodes, n_edges, weight_range=weight_range, seed=seed
+            )
+        elif method == "low_rank":
+            W = DAG.low_rank(
+                n_nodes, n_edges, weight_range=weight_range, seed=seed
+            )
+        # for weighted adjacency matrix W create CausalGraph object
+        # TODO
         # For getting CPDAG/PAG use causallearn
         return dag
 
