@@ -1,4 +1,5 @@
 import causallearn
+import gCastle
 
 
 class Simulator:
@@ -34,6 +35,7 @@ class Simulator:
             A CausalGraph object
         """
         dag = None
+        # For getting CPDAG/PAG use causallearn
         return dag
 
     def generate_data(self, true_dag, distribution_type, sample_size):
