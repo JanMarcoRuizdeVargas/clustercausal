@@ -22,9 +22,10 @@ class Simulator:
         true_dag,
         n_nodes,
         n_edges,
-        method,
+        dag_method,
         weight_range,
         distribution_type,
+        scm_method,
         sample_size,
         seed,
         noise_scale=1.0,
@@ -34,10 +35,10 @@ class Simulator:
         """
         if true_dag is None:
             true_dag = self.generate_dag(
-                n_nodes, n_edges, method, weight_range, seed
+                n_nodes, n_edges, dag_method, weight_range, seed
             )
         data = self.generate_data(
-            true_dag, sample_size, method, distribution_type, noise_scale
+            true_dag, sample_size, scm_method, distribution_type, noise_scale
         )
         return true_dag, data
 
@@ -45,7 +46,7 @@ class Simulator:
         self,
         n_nodes,
         n_edges,
-        method="erdos_renyi",
+        dag_method="erdos_renyi",
         weight_range=(-1, 2),
         seed=42,
     ):
@@ -55,31 +56,32 @@ class Simulator:
             n_nodes: number of nodes in the causal graph
             n_edges: number of edges in the causal graph
             method: method to generate the causal graph]
-                    methods supported: erdos_renyi, scale_free, bipartite, hierarchical, low_rank
+                    methods supported: erdos_renyi, scale_free, bipartite, hierarchical
+                    not supported: low_rank
             seed: seed for the random number generator
         Output:
             A CausalGraph object
         """
-        if method == "erdos_renyi":
+        if dag_method == "erdos_renyi":
             W = DAG.erdos_renyi(
                 n_nodes, n_edges, weight_range=weight_range, seed=seed
             )
-        elif method == "scale_free":
+        elif dag_method == "scale_free":
             W = DAG.scale_free(
                 n_nodes, n_edges, weight_range=weight_range, seed=seed
             )
-        elif method == "bipartite":
+        elif dag_method == "bipartite":
             W = DAG.bipartite(
                 n_nodes, n_edges, weight_range=weight_range, seed=seed
             )
-        elif method == "hierarchical":
+        elif dag_method == "hierarchical":
             W = DAG.hierarchical(
                 n_nodes, n_edges, weight_range=weight_range, seed=seed
             )
-        elif method == "low_rank":
-            W = DAG.low_rank(
-                n_nodes, n_edges, weight_range=weight_range, seed=seed
-            )
+        # elif dag_method == "low_rank":
+        #     W = DAG.low_rank(
+        #         n_nodes, n_edges, weight_range=weight_range, seed=seed
+        #     )
         # for weighted adjacency matrix W create CausalGraph object
         true_dag = CausalGraph(no_of_var=W.shape[0])
         true_dag.adjacency_matrix = W
@@ -93,7 +95,7 @@ class Simulator:
         return true_dag
 
     def generate_data(
-        self, true_dag, sample_size, method, distribution_type, noise_scale
+        self, true_dag, sample_size, scm_method, distribution_type, noise_scale
     ):
         """
         Generate data from the causal graph
@@ -109,7 +111,7 @@ class Simulator:
         dataset = IIDSimulation(
             true_dag.adjacency_matrix,
             n=sample_size,
-            method=method,
+            method=scm_method,
             sem_type=distribution_type,
             noise_scale=noise_scale,
         )

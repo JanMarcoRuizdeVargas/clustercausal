@@ -97,8 +97,6 @@ class ClusterFCI:
             """
 
             # Restrict to local graph
-            cdag = cdag
-            dataset = self.data
             node_to_global_indice = cdag.cg.G.node_map  # Dict: Node -> int
             local_graph = cdag.get_local_graph(cluster)
             # map global_indices to local_indices
