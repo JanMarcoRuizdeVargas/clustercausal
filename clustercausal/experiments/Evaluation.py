@@ -5,6 +5,11 @@ import causallearn
 import castle
 
 # Import causallearn metrics
+from causallearn.graph.AdjacencyConfusion import AdjacencyConfusion
+from causallearn.graph.ArrowConfusion import ArrowConfusion
+from causallearn.graph.SHD import SHD
+from causallearn.graph.Graph import Graph
+from causallearn.graph.Endpoint import Endpoint
 
 from clustercausal.clusterdag.ClusterDAG import ClusterDAG
 
@@ -40,9 +45,23 @@ class Evaluator:
             -recall
             -structural hamming distance
             -structural intervention distance
-
         """
         pass
 
-    def true_positive_rate():
-        pass
+    def get_adjacency_confusion(self, truth: Graph, est: Graph):
+        """
+        Calculate adjacency confusion like in causallearn
+        """
+        return AdjacencyConfusion(truth, est)
+
+    def get_arrow_confusion(self, truth: Graph, est: Graph):
+        """
+        Calculate arrow confusion like in causallearn
+        """
+        return ArrowConfusion(truth, est)
+
+    def get_shd(self, truth: Graph, est: Graph):
+        """
+        Calculate structural hamming distance like in causallearn
+        """
+        return SHD(truth, est)

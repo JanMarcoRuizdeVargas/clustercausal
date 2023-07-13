@@ -83,9 +83,6 @@ def test_simulator():
                                 )
 
 
-test_simulator()
-
-
 def test_simulator_generate_dag():
     # TODO
     pass
