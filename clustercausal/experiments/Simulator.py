@@ -48,7 +48,9 @@ class Simulator:
         cluster_mapping and data
         """
         self.true_dag, self.data = self.create_dag_and_data()
-        cluster_graph, self.true_dag, cluster_mapping = self.generate_clustering()
+        cluster_graph, self.true_dag, cluster_mapping = self.generate_clustering(
+            n_clusters=None, n_c_edges=None
+        )
         self.cluster_graph = cluster_graph
         self.cluster_mapping = cluster_mapping
 
