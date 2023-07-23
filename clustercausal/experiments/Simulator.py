@@ -131,7 +131,6 @@ class Simulator:
                     # Make tail at i and arrow at j
                     true_dag.G.graph[i, j] = -1
                     true_dag.G.graph[j, i] = 1
-
         return true_dag
 
     def generate_data(self):
@@ -162,7 +161,7 @@ class Simulator:
         """
         np.random.seed(self.seed)
         if n_clusters is None:
-            n_clusters = np.random.randint(low=2, high=self.n_nodes / 2)
+            n_clusters = np.random.randint(low=3, high=self.n_nodes / 2 + 1)
         if n_c_edges is None:
             n_c_edges = np.random.randint(
                 low=n_clusters - 1, high=n_clusters * (n_clusters - 1) / 2
@@ -207,3 +206,7 @@ class Simulator:
                         self.true_dag.G.graph[n2_indice, n1_indice] = -1
 
         return cluster_graph, self.true_dag, cluster_mapping
+
+
+simulation = Simulator()
+simulated_cluster_dag = simulation.run()
