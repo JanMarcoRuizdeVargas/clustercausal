@@ -9,8 +9,8 @@ from clustercausal.experiments.Simulator import Simulator
 def test_simulator():
     # list_of_dag_nodes = [5, 10, 15, 20]
     # list_of_dag_edges = [3, 5, 7, 10]
-    list_of_dag_nodes = [5]
-    list_of_dag_edges = [5]
+    list_of_dag_nodes = [7]
+    list_of_dag_edges = [7]
     list_of_dag_methods = [
         "erdos_renyi",
         "scale_free",
@@ -35,12 +35,13 @@ def test_simulator():
                     for noise_scale in list_of_noise_scales:
                         if scm_method == "linear":
                             for sem_type in list_of_linear_sem_types:
-                                simulation = Simulator()
-                                true_dag, data = simulation.run(
+                                simulation = Simulator(
                                     true_dag=None,
                                     n_nodes=n_nodes,
                                     n_edges=n_edges,
                                     dag_method=dag_method,
+                                    n_clusters=None,
+                                    n_c_edges=None,
                                     weight_range=(-1, 2),
                                     distribution_type=sem_type,
                                     scm_method=scm_method,
@@ -48,23 +49,25 @@ def test_simulator():
                                     seed=42,
                                     noise_scale=noise_scale,
                                 )
+                                cluster_dag = simulation.run()
                                 nx_graph = nx.from_numpy_array(
-                                    true_dag.adjacency_matrix,
+                                    cluster_dag.true_dag.weighted_adjacency_matrix,
                                     create_using=nx.DiGraph,
                                 )
-                                assert data.shape == (100, n_nodes)
+                                assert cluster_dag.data.shape == (100, n_nodes)
                                 assert (
                                     nx.is_directed_acyclic_graph(nx_graph)
                                     == True
                                 )
                         if scm_method == "nonlinear":
                             for sem_type in list_of_nonlinear_sem_types:
-                                simulation = Simulator()
-                                true_dag, data = simulation.run(
+                                simulation = Simulator(
                                     true_dag=None,
                                     n_nodes=n_nodes,
                                     n_edges=n_edges,
                                     dag_method=dag_method,
+                                    n_clusters=None,
+                                    n_c_edges=None,
                                     weight_range=(-1, 2),
                                     distribution_type=sem_type,
                                     scm_method=scm_method,
@@ -72,11 +75,12 @@ def test_simulator():
                                     seed=42,
                                     noise_scale=noise_scale,
                                 )
+                                cluster_dag = simulation.run()
                                 nx_graph = nx.from_numpy_array(
-                                    true_dag.adjacency_matrix,
+                                    cluster_dag.true_dag.weighted_adjacency_matrix,
                                     create_using=nx.DiGraph,
                                 )
-                                assert data.shape == (100, n_nodes)
+                                assert cluster_dag.data.shape == (100, n_nodes)
                                 assert (
                                     nx.is_directed_acyclic_graph(nx_graph)
                                     == True
