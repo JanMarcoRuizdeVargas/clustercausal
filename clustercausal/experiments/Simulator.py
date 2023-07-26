@@ -64,7 +64,7 @@ class Simulator:
         self.seed = seed
         self.noise_scale = noise_scale
 
-    def run(self):
+    def run(self) -> ClusterDAG:
         """
         Run the simulator and generate a cluster_dag
         Returns:
@@ -97,7 +97,10 @@ class Simulator:
             node2_name = edge.get_node2().get_name()
             cluster_edges.append((node1_name, node2_name))
 
-        cluster_dag = ClusterDAG(cluster_mapping, cluster_edges)
+        # Ensure that node names in true_dag and est_dag (calculated later)
+        # are the same
+        node_names = [node.get_name() for node in adj_dag.G.get_nodes()]
+        cluster_dag = ClusterDAG(cluster_mapping, cluster_edges, node_names)
         cluster_dag.true_dag = adj_dag
         cluster_dag.data = data
         return cluster_dag

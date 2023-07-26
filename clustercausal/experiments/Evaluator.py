@@ -15,7 +15,7 @@ from clustercausal.clusterdag.ClusterDAG import ClusterDAG
 
 
 class Evaluator:
-    def __init__(self):
+    def __init__(self, truth: Graph, est: Graph):
         """
         Evaluator class for comparing different algorithms
         Use tools from causallearn, gCastle and causal discovery toolbox
@@ -46,22 +46,83 @@ class Evaluator:
             -structural hamming distance
             -structural intervention distance
         """
-        pass
+        self.truth = truth
+        self.est = est
+        assert (
+            self.truth.get_nodes() == self.est.get_nodes()
+        )  # Node lists must be same
 
-    def get_adjacency_confusion(self, truth: Graph, est: Graph):
+    def get_causallearn_metrics(self):
+        """
+        Calculate all causallearn metrics
+            -adjacency confusion
+            -arrow confusion
+            -structural hamming distance
+        Returns:
+            -adjacency_confusion: dictionary
+            -arrow_confusion: dictionary
+            -shd: int
+        """
+        adjacency_confusion = self.get_adjacency_confusion()
+        arrow_confusion = self.get_arrow_confusion()
+        shd = self.get_shd()
+        return adjacency_confusion, arrow_confusion, shd
+
+    def get_adjacency_confusion(self):
         """
         Calculate adjacency confusion like in causallearn
+        Returns:
+            -adjacency_confusion: dictionary with the metrics
+            Metrics:
+            -adjTp/Fp/Fn/Tn: True postive/false positive/false negative/true negative edges.
+            -adjPrec: Precision for the adjacency matrix.
+            -adjRec: Recall for the adjacency matrix.
         """
-        return AdjacencyConfusion(truth, est)
+        adj_conf = AdjacencyConfusion(self.truth, self.est)
+        adjacency_confusion = {}
+        adjacency_confusion["true_positive"] = adj_conf.get_adj_tp()
+        adjacency_confusion["false_positive"] = adj_conf.get_adj_fp()
+        adjacency_confusion["false_negative"] = adj_conf.get_adj_fn()
+        adjacency_confusion["true_negative"] = adj_conf.get_adj_tn()
+        adjacency_confusion["precision"] = adj_conf.get_adj_precision()
+        adjacency_confusion["recall"] = adj_conf.get_adj_recall()
+        self.adjacency_confusion = adjacency_confusion
+        return adjacency_confusion
 
-    def get_arrow_confusion(self, truth: Graph, est: Graph):
+    def get_arrow_confusion(self):
         """
         Calculate arrow confusion like in causallearn
+        Returns:
+            -arrow_confusion: dictionary with the metrics
+            (entries with ce positives only get counted in
+                    truth_positive (est_positive) if the nodes are
+                    adjacent in est (truth))
         """
-        return ArrowConfusion(truth, est)
+        arrow_conf = ArrowConfusion(self.truth, self.est)
+        arrow_confusion = {}
+        arrow_confusion["true_positive"] = arrow_conf.get_arrows_tp()
+        arrow_confusion["false_positive"] = arrow_conf.get_arrows_fp()
+        arrow_confusion["false_negative"] = arrow_conf.get_arrows_fn()
+        arrow_confusion["true_negative"] = arrow_conf.get_arrows_tn()
+        arrow_confusion["precision"] = arrow_conf.get_arrows_precision()
+        arrow_confusion["recall"] = arrow_conf.get_arrows_recall()
+        arrow_confusion["true_positive_ce"] = arrow_conf.get_arrows_tp_ce()
+        arrow_confusion["false_positive_ce"] = arrow_conf.get_arrows_fp_ce()
+        arrow_confusion["false_negative_ce"] = arrow_conf.get_arrows_fn_ce()
+        arrow_confusion["true_negative_ce"] = arrow_conf.get_arrows_tn_ce()
+        arrow_confusion["precision_ce"] = arrow_conf.get_arrows_precision_ce()
+        arrow_confusion["recall_ce"] = arrow_conf.get_arrows_recall_ce()
+        self.arrow_confusion = arrow_confusion
+        return arrow_confusion
 
-    def get_shd(self, truth: Graph, est: Graph):
+    def get_shd(self):
         """
         Calculate structural hamming distance like in causallearn
+        This is the number of edge insertions, deletions or flips
+        in order to transform one graph to another graph.
+        Returns:
+            -shd: Structural Hamming Distance.
         """
-        return SHD(truth, est)
+        shd = SHD(self.truth, self.est)
+        self.shd = shd.get_shd()
+        return self.shd

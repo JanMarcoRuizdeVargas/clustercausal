@@ -35,7 +35,12 @@ class ClusterDAG:
 
     """
 
-    def __init__(self, cluster_mapping: dict, cluster_edges: list):
+    def __init__(
+        self,
+        cluster_mapping: dict,
+        cluster_edges: list,
+        node_names: list | None = None,
+    ):
         """
         Construct a CDAG object from a cluster dictionary
         The CDAG is stored as a dictionary.
@@ -52,10 +57,15 @@ class ClusterDAG:
         self.true_dag = None
         self.cluster_mapping = cluster_mapping
         self.cluster_edges = cluster_edges
-        self.node_names = []
-        for cluster in self.cluster_mapping:
-            self.node_names.extend(self.cluster_mapping[cluster])
-        self.node_indices = {}  # Dictionary that points to which cluster the node is in
+        self.node_names = node_names  # must be in same order as in data
+        if self.node_names is None:  # This can mess up order of nodes!
+            self.node_names = []
+            for cluster in self.cluster_mapping:
+                self.node_names.extend(self.cluster_mapping[cluster])
+
+        self.node_indices = (
+            {}
+        )  # Dictionary that points to which cluster the node is in
         for node in self.node_names:
             for cluster, vertice in self.cluster_mapping.items():
                 if node in vertice:
@@ -72,17 +82,17 @@ class ClusterDAG:
             if cluster1 != cluster2:
                 if (cluster1_name, cluster2_name) not in self.cluster_edges:
                     self.cluster_graph.G.remove_edge(edge)
-                    logging.info(
-                        "removed edge:"
-                        f" ({cluster1.get_name()},{cluster2.get_name()})"
-                    )
+                    # logging.info(
+                    #     "removed edge:"
+                    #     f" ({cluster1.get_name()},{cluster2.get_name()})"
+                    # )
                 if (cluster1_name, cluster2_name) in self.cluster_edges:
                     self.cluster_graph.G.remove_edge(edge)
                     self.cluster_graph.G.add_directed_edge(cluster1, cluster2)
-                    logging.info(
-                        "oriented edge:"
-                        f" ({cluster1.get_name()},{cluster2.get_name()})"
-                    )
+                    # logging.info(
+                    #     "oriented edge:"
+                    #     f" ({cluster1.get_name()},{cluster2.get_name()})"
+                    # )
 
     def cdag_to_pag(self, forbidden_latent_edges: list):
         """
@@ -113,16 +123,16 @@ class ClusterDAG:
             if cluster1 != cluster2:
                 if (cluster1, cluster2) not in self.cluster_edges:
                     self.cg.G.remove_edge(edge)
-                    logging.info(
-                        "removed edge:" f" ({node1.get_name()},{node2.get_name()})"
-                    )
+                    # logging.info(
+                    #     "removed edge:" f" ({node1.get_name()},{node2.get_name()})"
+                    # )
                 if (cluster1, cluster2) in self.cluster_edges:
                     self.cg.G.remove_edge(edge)
                     self.cg.G.add_directed_edge(node1, node2)
-                    logging.info(
-                        "oriented edge:" f" ({node1.get_name()},{node2.get_name()})"
-                    )
-        return self.cg
+        #             logging.info(
+        #                 "oriented edge:" f" ({node1.get_name()},{node2.get_name()})"
+        #             )
+        # return self.cg
 
     def draw_mpdag(self):
         """
@@ -150,7 +160,9 @@ class ClusterDAG:
         self.cdag_list_of_topological_sort = list(topological_generator)
         if len(self.cdag_list_of_topological_sort) == 0:
             # If only one cluster, nx doesn't return a list containing only the cluster
-            self.cdag_list_of_topological_sort = list(self.cluster_mapping.keys())
+            self.cdag_list_of_topological_sort = list(
+                self.cluster_mapping.keys()
+            )
             return list(self.cluster_mapping.keys())
         return self.cdag_list_of_topological_sort
 
@@ -169,7 +181,9 @@ class ClusterDAG:
         cluster_name = cluster.get_name()
         names_of_relevant_nodes = []
         for clust in relevant_clusters:
-            names_of_relevant_nodes.extend(self.cluster_mapping[clust.get_name()])
+            names_of_relevant_nodes.extend(
+                self.cluster_mapping[clust.get_name()]
+            )
         relevant_nodes = []
         for node_name in names_of_relevant_nodes:
             relevant_nodes.append(self.get_node_by_name(node_name, self.cg))
