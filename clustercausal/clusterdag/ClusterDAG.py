@@ -105,7 +105,8 @@ class ClusterDAG:
 
     def cdag_to_mpdag(self) -> CausalGraph:
         """
-        Constructs a MPDAG from a CDAG and stores it in a causallearn
+        Constructs a MPDAG (maximally partially directed DAG)
+        from a CDAG and stores it in a causallearn
         BackgroundKnowledge object.
         """
         # Create the list of node_names needed for CausalGraph
@@ -363,10 +364,23 @@ class ClusterDAG:
         return node_names
 
     @staticmethod
-    def get_key_by_value(dictionary, value):
+    def get_key_by_value(dictionary: dict, value):
         # Helper function to get Node object from node_map value i regarding GraphNode object
+        # Only works if key-value is a 1-1 correspondence
         for key, val in dictionary.items():
             if val == value:
+                return key
+        return None  # Value not found in the dictionary
+
+    @staticmethod
+    def find_keys(dictionary: dict, value) -> list:
+        # Helper function to get key if value is in
+        # value list of dictionary
+        # Dictionary must be of type dict{key: list}
+        # value must be unique to one key
+        keys = []
+        for key, values in dictionary.items():
+            if value in values:
                 return key
         return None  # Value not found in the dictionary
 
