@@ -56,6 +56,7 @@ class Simulator:
         self.true_dag = true_dag
         self.n_nodes = n_nodes
         self.n_edges = n_edges
+        print("Warning: n_edges is not exact due to gcastle implementation")
         self.dag_method = dag_method
         self.n_clusters = n_clusters
         # self.n_c_edges = n_c_edges
