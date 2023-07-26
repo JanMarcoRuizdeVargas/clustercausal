@@ -113,6 +113,36 @@ class ClusterDAG:
         self.cg = CausalGraph(
             no_of_var=len(self.node_names), node_names=self.node_names
         )
+
+        # Remove edges that are forbidden by the CDAG
+        for edge in self.cg.G.get_graph_edges():
+            # Get clusters of the nodes from the edge
+            node1_name = edge.get_node1().get_name()
+            node2_name = edge.get_node2().get_name()
+            dictionary = self.cluster_mapping
+            c1_name = self.find_key(dictionary=dictionary, value=node1_name)
+            c2_name = self.find_key(dictionary=dictionary, value=node2_name)
+            # If the nodes are in different clusters, check if the edge is forbidden
+            if c1_name != c2_name:
+                if (c1_name, c2_name) not in self.cluster_edges and (
+                    c2_name,
+                    c1_name,
+                ) not in self.cluster_edges:
+                    self.cg.G.remove_edge(edge)
+                if (c1_name, c2_name) in self.cluster_edges:
+                    self.cg.G.remove_edge(edge)
+                    self.cg.G.add_directed_edge(
+                        edge.get_node1(), edge.get_node2()
+                    )
+                if (c2_name, c1_name) in self.cluster_edges:
+                    self.cg.G.remove_edge(edge)
+                    self.cg.G.add_directed_edge(
+                        edge.get_node2(), edge.get_node1()
+                    )
+                # TODO: Latent variables
+
+        # OLD CODE
+        """
         # Remove edges that are forbidden by the CDAG
         # self.background_knowledge = BackgroundKnowledge()
         for edge in self.cg.G.get_graph_edges():
@@ -124,15 +154,18 @@ class ClusterDAG:
             if cluster1 != cluster2:
                 if (cluster1, cluster2) not in self.cluster_edges:
                     self.cg.G.remove_edge(edge)
-                    # logging.info(
-                    #     "removed edge:" f" ({node1.get_name()},{node2.get_name()})"
-                    # )
+                    logging.info(
+                        "removed edge:"
+                        f" ({node1.get_name()},{node2.get_name()})"
+                    )
                 if (cluster1, cluster2) in self.cluster_edges:
                     self.cg.G.remove_edge(edge)
                     self.cg.G.add_directed_edge(node1, node2)
-        #             logging.info(
-        #                 "oriented edge:" f" ({node1.get_name()},{node2.get_name()})"
-        #             )
+                    logging.info(
+                        "oriented edge:"
+                        f" ({node1.get_name()},{node2.get_name()})"
+                    )
+                    """
         # return self.cg
 
     def draw_mpdag(self):
@@ -373,7 +406,7 @@ class ClusterDAG:
         return None  # Value not found in the dictionary
 
     @staticmethod
-    def find_keys(dictionary: dict, value) -> list:
+    def find_key(dictionary: dict, value) -> list:
         # Helper function to get key if value is in
         # value list of dictionary
         # Dictionary must be of type dict{key: list}

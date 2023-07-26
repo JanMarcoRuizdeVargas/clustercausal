@@ -271,8 +271,8 @@ class Simulator:
         for edge in dag.G.get_graph_edges():
             node1_name = edge.get_node1().get_name()
             node2_name = edge.get_node2().get_name()
-            c1_name = ClusterDAG.find_keys(cluster_mapping, node1_name)
-            c2_name = ClusterDAG.find_keys(cluster_mapping, node2_name)
+            c1_name = ClusterDAG.find_key(cluster_mapping, node1_name)
+            c2_name = ClusterDAG.find_key(cluster_mapping, node2_name)
             if c1_name != c2_name:
                 endpoint1 = edge.get_endpoint1()
                 endpoint2 = edge.get_endpoint2()
@@ -363,5 +363,5 @@ class Simulator:
         # return dag, cluster_graph, cluster_mapping
 
 
-simulation = Simulator(n_nodes=5, n_edges=7, seed=1234)
-cluster_dag = simulation.run()
+# simulation = Simulator(n_nodes=5, n_edges=7, seed=1234)
+# cluster_dag = simulation.run()
