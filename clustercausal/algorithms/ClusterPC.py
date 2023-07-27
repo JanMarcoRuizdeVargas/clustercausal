@@ -80,25 +80,24 @@ class ClusterPC:
         no_of_var = self.data.shape[1]
         # pbar = tqdm(total=no_of_var) if self.show_progress else None
         for cluster_name in self.cdag.cdag_list_of_topological_sort:
-            print(f"\nBeginning work on cluster {cluster_name}")
+            # print(f"\nBeginning work on cluster {cluster_name}")
             cluster = self.cdag.get_node_by_name(
                 cluster_name, cg=self.cdag.cluster_graph
             )
             for parent in self.cdag.cluster_graph.G.get_parents(cluster):
-                print(
-                    "\nInter phase between low cluster"
-                    f" {cluster.get_name()} and parent {parent.get_name()}"
-                )
+                # print(
+                #     "\nInter phase between low cluster"
+                #     f" {cluster.get_name()} and parent {parent.get_name()}"
+                # )
                 self.inter_cluster_phase(cluster, parent)
             # TODO Apply Meek edge orientation rules here too?
-            print(f"\nIntra phase in cluster {cluster.get_name()}")
+            # print(f"\nIntra phase in cluster {cluster.get_name()}")
             self.intra_cluster_phase(cluster)
             # TODO Apply Meek edge orientation rules here too?
         # if self.show_progress:
         #   pbar.close()
 
         # TODO Meek edge orientation rules
-        print("Applying edge orientation rules")
         # Add d-separations present in cluster_graph to sepsets - cluster triplets
         # This code is not necessary - ignore
         """
@@ -153,6 +152,8 @@ class ClusterPC:
                                     append_value(cg_0.sepset, i, j, sepset_node_indices)
                             Flag = False                           
         """
+
+        # print("Applying edge orientation rules")
         # As some nodes have no edge by CDAG definition, they never get tested so have Nonetype sepsets
         # manually have to add an empty sepset for them else the Meek rules try to access NoneType
         for i in range(no_of_var):
@@ -299,7 +300,9 @@ class ClusterPC:
                 if self.show_progress:
                     pbar.update()
                 if self.show_progress:
-                    pbar.set_description(f"Depth={depth}, working on node {x}")
+                    pbar.set_description(
+                        f"Inter: {high_cluster.get_name()}->{low_cluster.get_name()}, Depth={depth}, working on node {x}"
+                    )
                 # Get all neighbors of node_x in the cluster, format is integer values
                 # in adjacency matrix
                 Neigh_x = self.cdag.cg.neighbors(x)
@@ -386,7 +389,7 @@ class ClusterPC:
                     y_name = self.cdag.get_key_by_value(
                         self.cdag.cg.G.node_map, y
                     )
-                    print(f"Deleted edge from {x_name} to {y_name}")
+                    # print(f"Deleted edge from {x_name} to {y_name}")
             local_graph = self.cdag.get_local_graph(low_cluster)
             # print('LOCAL GRAPH DRAWN BELOW')
             # local_graph.draw_pydot_graph()
@@ -471,7 +474,9 @@ class ClusterPC:
                 if self.show_progress:
                     pbar.update()
                 if self.show_progress:
-                    pbar.set_description(f"Depth={depth}, working on node {x}")
+                    pbar.set_description(
+                        f"Intra: {cluster.get_name()}    , Depth={depth}, working on node {x}"
+                    )
                 # Get all neighbors of node_x in the cluster, is integer values in adjacency matrix
                 Neigh_x = self.cdag.cg.neighbors(x)
                 # if self.verbose: print(f'Neigh_x is {Neigh_x}')
@@ -551,7 +556,7 @@ class ClusterPC:
                 )
                 if edge1 is not None:
                     self.cdag.cg.G.remove_edge(edge1)
-                    print(f"Deleted edge from {x} to {y}")
+                    # print(f"Deleted edge from {x} to {y}")
             # Update local graph to reflect edge deletions that were just done
             local_graph = self.cdag.get_local_graph(cluster)
             # print('LOCAL GRAPH DRAWN BELOW')

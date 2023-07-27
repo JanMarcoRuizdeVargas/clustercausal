@@ -187,7 +187,7 @@ class Simulator:
             distribution_type: distribution type of the data
                     methods supported:
                         gauss, exp, gumbel, uniform, logistic (linear);
-                        mlp, mim, gp, gp-add, quadratic (nonlinear).
+                        lmp, mim, gp, gp-add, quadratic (nonlinear).
             scm_method: linear or nonlinear, default is linear
             noise_scale: scale of the noise in the data
         Output:
