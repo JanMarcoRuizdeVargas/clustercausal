@@ -79,6 +79,9 @@ class ClusterPC:
         start = time.time()
         no_of_var = self.data.shape[1]
         # pbar = tqdm(total=no_of_var) if self.show_progress else None
+        print(
+            f"Topological ordering{(self.cdag.cdag_list_of_topological_sort)}"
+        )
         for cluster_name in self.cdag.cdag_list_of_topological_sort:
             # print(f"\nBeginning work on cluster {cluster_name}")
             cluster = self.cdag.get_node_by_name(
@@ -89,7 +92,8 @@ class ClusterPC:
                 #     "\nInter phase between low cluster"
                 #     f" {cluster.get_name()} and parent {parent.get_name()}"
                 # )
-                self.inter_cluster_phase(cluster, parent)
+                if parent is not None:
+                    self.inter_cluster_phase(cluster, parent)
             # TODO Apply Meek edge orientation rules here too?
             # print(f"\nIntra phase in cluster {cluster.get_name()}")
             self.intra_cluster_phase(cluster)
@@ -211,7 +215,7 @@ class ClusterPC:
         self.cdag.cg = cg
         end = time.time()
         self.cdag.cg.PC_elapsed = end - start
-        print(f"Duration of algorithm was {self.cdag.cg.PC_elapsed}sec")
+        print(f"Duration of algorithm was {self.cdag.cg.PC_elapsed:.2f}sec")
 
         return self.cdag.cg  # Return CausalGraph of the CDAG
 
@@ -220,6 +224,7 @@ class ClusterPC:
         Runs the inter-cluster phase of the ClustPC algorithm for a given cluster.
         cluster is a node object of CausalGraph
         """
+        start_inter = time.time()
         assert type(self.data) == np.ndarray
         assert 0 < self.alpha < 1
 
@@ -393,8 +398,12 @@ class ClusterPC:
             local_graph = self.cdag.get_local_graph(low_cluster)
             # print('LOCAL GRAPH DRAWN BELOW')
             # local_graph.draw_pydot_graph()
-
+        end_inter = time.time()
+        time_elapsed = end_inter - start_inter
         if self.show_progress:
+            pbar.set_postfix_str(
+                f"duration: {time_elapsed:.2f}sec", refresh=True
+            )
             pbar.close()
 
         # TODO Orientation rules
@@ -407,6 +416,7 @@ class ClusterPC:
         Updates self.cdag.cg each step.
         Input: cluster, a node object of CausalGraph
         """
+        start_intra = time.time()
         assert type(self.data) == np.ndarray
         assert 0 < self.alpha < 1
 
@@ -454,6 +464,17 @@ class ClusterPC:
             if self.show_progress
             else None
         )
+
+        if (
+            self.show_progress
+        ):  # in case of only one node in cluster, close manually
+            if len(cluster_node_indices) == 1:
+                x = cluster_node_indices[0]
+                pbar.reset()
+                pbar.update()
+                pbar.set_description(
+                    f"Intra: {cluster.get_name()}    , Depth={0}, working on node {x}"
+                )
         # pbar = pbar
 
         # Difference to local pc algorithm is that we consider only edges in the cluster
@@ -561,8 +582,12 @@ class ClusterPC:
             local_graph = self.cdag.get_local_graph(cluster)
             # print('LOCAL GRAPH DRAWN BELOW')
             # local_graph.draw_pydot_graph()
-
+        end_intra = time.time()
+        time_elapsed = end_intra - start_intra
         if self.show_progress:
+            pbar.set_postfix_str(
+                f"duration: {time_elapsed:.2f}sec", refresh=True
+            )
             pbar.close()
 
         # TODO Orientation rules
