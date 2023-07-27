@@ -48,6 +48,7 @@ class Simulator:
         scm_method="linear",
         sample_size=10000,
         seed=42,
+        node_names=None,
         noise_scale=1.0,
     ):
         """
@@ -65,6 +66,7 @@ class Simulator:
         self.scm_method = scm_method
         self.sample_size = sample_size
         self.seed = seed
+        self.node_names = node_names
         self.noise_scale = noise_scale
 
     def run(self) -> ClusterDAG:
@@ -82,6 +84,7 @@ class Simulator:
                 self.dag_method,
                 self.weight_range,
                 self.seed,
+                self.node_names,
             )
         cluster_dag = self.generate_clustering(dag, self.n_clusters, self.seed)
 

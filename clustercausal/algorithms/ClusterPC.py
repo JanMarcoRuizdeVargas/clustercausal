@@ -394,7 +394,8 @@ class ClusterPC:
                     y_name = self.cdag.get_key_by_value(
                         self.cdag.cg.G.node_map, y
                     )
-                    # print(f"Deleted edge from {x_name} to {y_name}")
+                    if self.verbose:
+                        print(f"Deleted edge from {x_name} to {y_name}")
             local_graph = self.cdag.get_local_graph(low_cluster)
             # print('LOCAL GRAPH DRAWN BELOW')
             # local_graph.draw_pydot_graph()
@@ -512,7 +513,10 @@ class ClusterPC:
                 # Possible blocking nodes are
                 local_mask = np.isin(Neigh_x, local_graph_node_indices)
                 possible_blocking_nodes = Neigh_x[local_mask]
-                # print(f'Possible blocking nodes are {possible_blocking_nodes}')
+                # if self.verbose:
+                #     print(
+                #         f"Possible blocking nodes are {possible_blocking_nodes}"
+                #     )
                 if len(Neigh_x) < depth - 1:
                     continue
                 for y in Neigh_x_in_clust:
@@ -577,7 +581,8 @@ class ClusterPC:
                 )
                 if edge1 is not None:
                     self.cdag.cg.G.remove_edge(edge1)
-                    # print(f"Deleted edge from {x} to {y}")
+                    if self.verbose:
+                        print(f"Deleted edge from {x} to {y}")
             # Update local graph to reflect edge deletions that were just done
             local_graph = self.cdag.get_local_graph(cluster)
             # print('LOCAL GRAPH DRAWN BELOW')
