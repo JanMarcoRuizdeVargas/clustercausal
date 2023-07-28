@@ -75,28 +75,31 @@ class ClusterPC:
     def run(self) -> CausalGraph:
         """
         Runs the C-PC algorithm.
+        Updates self.cdag.cg each step, which is a CausalGraph object.
         """
         start = time.time()
         no_of_var = self.data.shape[1]
         # pbar = tqdm(total=no_of_var) if self.show_progress else None
-        print(
-            f"Topological ordering{(self.cdag.cdag_list_of_topological_sort)}"
-        )
+        if self.verbose:
+            print(
+                f"Topological ordering {(self.cdag.cdag_list_of_topological_sort)}"
+            )
         for cluster_name in self.cdag.cdag_list_of_topological_sort:
             # print(f"\nBeginning work on cluster {cluster_name}")
             cluster = self.cdag.get_node_by_name(
                 cluster_name, cg=self.cdag.cluster_graph
             )
-            for parent in self.cdag.cluster_graph.G.get_parents(cluster):
-                # print(
-                #     "\nInter phase between low cluster"
-                #     f" {cluster.get_name()} and parent {parent.get_name()}"
-                # )
-                if parent is not None:
-                    self.inter_cluster_phase(cluster, parent)
+            # for parent in self.cdag.cluster_graph.G.get_parents(cluster):
+            #     # print(
+            #     #     "\nInter phase between low cluster"
+            #     #     f" {cluster.get_name()} and parent {parent.get_name()}"
+            #     # )
+            #     if parent is not None:
+            #         self.inter_cluster_phase(cluster, parent)
+            self.into_cluster_phase(cluster)
             # TODO Apply Meek edge orientation rules here too?
             # print(f"\nIntra phase in cluster {cluster.get_name()}")
-            self.intra_cluster_phase(cluster)
+            self.in_cluster_phase(cluster)
             # TODO Apply Meek edge orientation rules here too?
         # if self.show_progress:
         #   pbar.close()
@@ -219,12 +222,16 @@ class ClusterPC:
 
         return self.cdag.cg  # Return CausalGraph of the CDAG
 
-    def inter_cluster_phase(self, low_cluster, high_cluster):
+    def into_cluster_phase(self, low_cluster):
         """
-        Runs the inter-cluster phase of the ClustPC algorithm for a given cluster.
-        cluster is a node object of CausalGraph
+        Runs the into-cluster phase of the ClustPC algorithm for a given cluster.
+        All edges between low_cluster and pa(low_cluster) are considered at the
+        same time.
+        Input:
+            -low_cluster: a node object of CausalGraph
+        Updates self.cdag.cg each step.
         """
-        start_inter = time.time()
+        start_into = time.time()
         assert type(self.data) == np.ndarray
         assert 0 < self.alpha < 1
 
@@ -241,43 +248,41 @@ class ClusterPC:
         nodes_names_in_low_cluster = self.cdag.cluster_mapping[
             low_cluster.get_name()
         ]
-        nodes_names_in_high_cluster = self.cdag.cluster_mapping[
-            high_cluster.get_name()
-        ]
+        # nodes_names_in_high_cluster = self.cdag.cluster_mapping[
+        #     high_cluster.get_name()
+        # ]
         nodes_in_low_cluster = self.cdag.get_list_of_nodes_by_name(
             list_of_node_names=nodes_names_in_low_cluster, cg=self.cdag.cg
         )
-        nodes_in_high_cluster = self.cdag.get_list_of_nodes_by_name(
-            list_of_node_names=nodes_names_in_high_cluster, cg=self.cdag.cg
-        )
-        subgraph_cluster = CausalGraph(
-            len(nodes_names_in_low_cluster) + len(nodes_names_in_high_cluster),
-            nodes_names_in_low_cluster + nodes_names_in_high_cluster,
-        )
-        subgraph_cluster.G = self.cdag.subgraph(
-            nodes_in_low_cluster + nodes_in_high_cluster
-        )
+        # nodes_in_high_cluster = self.cdag.get_list_of_nodes_by_name(
+        #     list_of_node_names=nodes_names_in_high_cluster, cg=self.cdag.cg
+        # )
+        # subgraph_cluster = CausalGraph(
+        #     len(nodes_names_in_low_cluster) + len(nodes_names_in_high_cluster),
+        #     nodes_names_in_low_cluster + nodes_names_in_high_cluster,
+        # )
+        # subgraph_cluster.G = self.cdag.subgraph(
+        #     nodes_in_low_cluster + nodes_in_high_cluster
+        # )
+
         # Collect the indices of nodes in subgraph and local_graph, w.r.t.
         # the entire adjacency matrix self.cdag.cg.G.graph
         cluster_node_indices = np.array(
-            [
-                self.cdag.cg.G.node_map[node]
-                for node in subgraph_cluster.G.nodes
-            ]
+            [self.cdag.cg.G.node_map[node] for node in nodes_in_low_cluster]
         )
-
         # Define the local graph which contains possible separating sets, here it is
         # low cluster union high cluster union low cluster parents
         # (high cluster is in low cluster parents per definition)
         local_graph = self.cdag.get_local_graph(low_cluster)
-
-        if self.verbose:
-            print(f"Cluster node indices are {cluster_node_indices}")
         local_graph_node_indices = np.array(
             [self.cdag.cg.G.node_map[node] for node in local_graph.G.nodes]
         )
+
         if self.verbose:
-            print(f"Local graph node indices are {cluster_node_indices}")
+            print(f"Cluster node indices are {cluster_node_indices}")
+
+        if self.verbose:
+            print(f"Local graph node indices are {local_graph_node_indices}")
 
         pbar = (
             tqdm(total=cluster_node_indices.shape[0])
@@ -306,36 +311,36 @@ class ClusterPC:
                     pbar.update()
                 if self.show_progress:
                     pbar.set_description(
-                        f"Inter: {high_cluster.get_name()}->{low_cluster.get_name()}, Depth={depth}, working on node {x}"
+                        f"Into: ->{low_cluster.get_name()}, Depth={depth}, working on node {x}"
                     )
-                # Get all neighbors of node_x in the cluster, format is integer values
+                # Get all neighbors of node_x in the entire cg, format is integer values
                 # in adjacency matrix
                 Neigh_x = self.cdag.cg.neighbors(x)
                 # if self.verbose: print(f'Neighbors of {x} is {Neigh_x}')
-                # Remove neighbors that are not in cluster
+                # Remove neighbors that are not in local_graph or are in cluster
                 cluster_mask = np.isin(Neigh_x, cluster_node_indices)
-                Neigh_x_in_clust = Neigh_x[cluster_mask]
+                Pa_x_outside_cluster = Neigh_x[~cluster_mask]
+                # Neigh_x_in_clust = Neigh_x[cluster_mask]
                 if self.verbose:
                     print(
-                        f"Neighbors of {x} in"
-                        f" ({low_cluster.get_name()},{high_cluster.get_name()})"
-                        f" are {Neigh_x_in_clust}"
+                        f"Parents of {x} in pa({low_cluster.get_name()}"
+                        f" are {Pa_x_outside_cluster}"
                     )
-                local_mask = np.isin(Neigh_x, local_graph_node_indices)
-                possible_blocking_nodes = Neigh_x[local_mask]
-                if len(possible_blocking_nodes) < depth - 1:
+                # local_mask = np.isin(Neigh_x, local_graph_node_indices)
+                # possible_blocking_nodes = Neigh_x[local_mask]
+                if len(Neigh_x) < depth - 1:
                     continue
-                for y in Neigh_x_in_clust:
+                for y in Pa_x_outside_cluster:
                     if self.verbose:
                         print("Testing edges from %d to %d" % (x, y))
                     # No other background knowledge functionality supported for now
                     # No parent checking for mns separation supported for now TODO
                     sepsets = set()
-                    Neigh_x_no_y = np.delete(
-                        possible_blocking_nodes,
-                        np.where(possible_blocking_nodes == y),
+                    Pa_x_no_y = np.delete(
+                        Pa_x_outside_cluster,
+                        np.where(Pa_x_outside_cluster == y),
                     )
-                    for S in combinations(Neigh_x_no_y, depth):
+                    for S in combinations(Pa_x_no_y, depth):
                         # print(f'Set S to be tested is {S}')
                         p = self.cdag.cg.ci_test(x, y, S)
                         if p > self.alpha:
@@ -399,8 +404,8 @@ class ClusterPC:
             local_graph = self.cdag.get_local_graph(low_cluster)
             # print('LOCAL GRAPH DRAWN BELOW')
             # local_graph.draw_pydot_graph()
-        end_inter = time.time()
-        time_elapsed = end_inter - start_inter
+        end_into = time.time()
+        time_elapsed = end_into - start_into
         if self.show_progress:
             pbar.set_postfix_str(
                 f"duration: {time_elapsed:.2f}sec", refresh=True
@@ -410,14 +415,14 @@ class ClusterPC:
         # TODO Orientation rules
         return self.cdag.cg
 
-    def intra_cluster_phase(self, cluster):
+    def in_cluster_phase(self, cluster):
         """
-        Runs the intra-cluster phase of the ClustPC algorithm for a given cluster.
+        Runs the in-cluster phase of the ClustPC algorithm for a given cluster.
         Adapted from causallearn pc algorithm.
         Updates self.cdag.cg each step.
         Input: cluster, a node object of CausalGraph
         """
-        start_intra = time.time()
+        start_in = time.time()
         assert type(self.data) == np.ndarray
         assert 0 < self.alpha < 1
 
@@ -474,7 +479,7 @@ class ClusterPC:
                 pbar.reset()
                 pbar.update()
                 pbar.set_description(
-                    f"Intra: {cluster.get_name()}    , Depth={0}, working on node {x}"
+                    f"In:     {cluster.get_name()}, Depth={0}, working on node {x}"
                 )
         # pbar = pbar
 
@@ -497,7 +502,7 @@ class ClusterPC:
                     pbar.update()
                 if self.show_progress:
                     pbar.set_description(
-                        f"Intra: {cluster.get_name()}    , Depth={depth}, working on node {x}"
+                        f"In:     {cluster.get_name()}, Depth={0}, working on node {x}"
                     )
                 # Get all neighbors of node_x in the cluster, is integer values in adjacency matrix
                 Neigh_x = self.cdag.cg.neighbors(x)
@@ -587,8 +592,8 @@ class ClusterPC:
             local_graph = self.cdag.get_local_graph(cluster)
             # print('LOCAL GRAPH DRAWN BELOW')
             # local_graph.draw_pydot_graph()
-        end_intra = time.time()
-        time_elapsed = end_intra - start_intra
+        end_in = time.time()
+        time_elapsed = end_in - start_in
         if self.show_progress:
             pbar.set_postfix_str(
                 f"duration: {time_elapsed:.2f}sec", refresh=True
