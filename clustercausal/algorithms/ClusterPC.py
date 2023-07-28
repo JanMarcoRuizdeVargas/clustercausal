@@ -277,7 +277,8 @@ class ClusterPC:
         local_graph_node_indices = np.array(
             [self.cdag.cg.G.node_map[node] for node in local_graph.G.nodes]
         )
-
+        local_graph_node_indices = np.array(sorted(local_graph_node_indices))
+        cluster_node_indices = np.array(sorted(cluster_node_indices))
         if self.verbose:
             print(f"Cluster node indices are {cluster_node_indices}")
 
@@ -289,6 +290,17 @@ class ClusterPC:
             if self.show_progress
             else None
         )
+
+        if (
+            self.show_progress
+        ):  # in case of only one node in cluster and no parent, close manually
+            if len(cluster_node_indices) == 1:
+                x = cluster_node_indices[0]
+                pbar.reset()
+                pbar.update()
+                pbar.set_description(
+                    f"Into: ->{low_cluster.get_name()}, Depth={depth}, working on node {x}"
+                )
         # pbar = pbar
 
         # Difference to local pc algorithm is that we consider only edges in the cluster
@@ -313,22 +325,31 @@ class ClusterPC:
                     pbar.set_description(
                         f"Into: ->{low_cluster.get_name()}, Depth={depth}, working on node {x}"
                     )
-                # Get all neighbors of node_x in the entire cg, format is integer values
-                # in adjacency matrix
+                # Get all nonchilds of node_x in the entire cg,  which is same as
+                # neighbors in cluster union parents of cluster
+                # format is integer values in adjacency matrix
                 Neigh_x = self.cdag.cg.neighbors(x)
+                node_x = ClusterDAG.get_key_by_value(
+                    self.cdag.cg.G.node_map, x
+                )
+                Child_x_nodes = self.cdag.cg.G.get_children(node_x)
+                Child_x_indices = [
+                    self.cdag.cg.G.node_map[node] for node in Child_x_nodes
+                ]
+                Nonchilds_x = np.setdiff1d(Neigh_x, Child_x_indices)
                 # if self.verbose: print(f'Neighbors of {x} is {Neigh_x}')
                 # Remove neighbors that are not in local_graph or are in cluster
-                cluster_mask = np.isin(Neigh_x, cluster_node_indices)
-                Pa_x_outside_cluster = Neigh_x[~cluster_mask]
+                cluster_mask = np.isin(Nonchilds_x, cluster_node_indices)
+                Pa_x_outside_cluster = Nonchilds_x[~cluster_mask]
                 # Neigh_x_in_clust = Neigh_x[cluster_mask]
                 if self.verbose:
                     print(
-                        f"Parents of {x} in pa({low_cluster.get_name()}"
+                        f"Parents of {x} in pa({low_cluster.get_name()})"
                         f" are {Pa_x_outside_cluster}"
                     )
                 # local_mask = np.isin(Neigh_x, local_graph_node_indices)
                 # possible_blocking_nodes = Neigh_x[local_mask]
-                if len(Neigh_x) < depth - 1:
+                if len(Nonchilds_x) < depth - 1:
                     continue
                 for y in Pa_x_outside_cluster:
                     if self.verbose:
