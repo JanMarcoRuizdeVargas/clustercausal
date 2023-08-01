@@ -190,14 +190,15 @@ class ClusterDAG:
         """
         nx_helper_graph = nx.DiGraph()
         nx_helper_graph.add_edges_from(self.cluster_edges)
+        nx_helper_graph.add_nodes_from(list(self.cluster_mapping.keys()))
         topological_generator = nx.topological_sort(nx_helper_graph)
         self.cdag_list_of_topological_sort = list(topological_generator)
-        if len(self.cdag_list_of_topological_sort) == 0:
-            # If only one cluster, nx doesn't return a list containing only the cluster
-            self.cdag_list_of_topological_sort = list(
-                self.cluster_mapping.keys()
-            )
-            return list(self.cluster_mapping.keys())
+        # if len(self.cdag_list_of_topological_sort) == 0:
+        #     # If only one cluster, nx doesn't return a list containing only the cluster
+        #     self.cdag_list_of_topological_sort = list(
+        #         self.cluster_mapping.keys()
+        #     )
+        #     return list(self.cluster_mapping.keys())
         return self.cdag_list_of_topological_sort
 
     def get_parents_plus(self, cluster: Node) -> tuple:
