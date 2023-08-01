@@ -248,11 +248,18 @@ class ClusterPC:
         nodes_names_in_low_cluster = self.cdag.cluster_mapping[
             low_cluster.get_name()
         ]
+        nodes_names_in_high_clusters = []
+        for parent in self.cdag.cluster_graph.G.get_parents(low_cluster):
+            names = self.cdag.cluster_mapping[parent.get_name()]
+            nodes_names_in_high_clusters.extend(names)
         # nodes_names_in_high_cluster = self.cdag.cluster_mapping[
         #     high_cluster.get_name()
         # ]
         nodes_in_low_cluster = self.cdag.get_list_of_nodes_by_name(
             list_of_node_names=nodes_names_in_low_cluster, cg=self.cdag.cg
+        )
+        nodes_in_high_clusters = self.cdag.get_list_of_nodes_by_name(
+            list_of_node_names=nodes_names_in_high_clusters, cg=self.cdag.cg
         )
         # nodes_in_high_cluster = self.cdag.get_list_of_nodes_by_name(
         #     list_of_node_names=nodes_names_in_high_cluster, cg=self.cdag.cg
@@ -280,26 +287,36 @@ class ClusterPC:
         local_graph_node_indices = np.array(sorted(local_graph_node_indices))
         cluster_node_indices = np.array(sorted(cluster_node_indices))
         if self.verbose:
-            print(f"Cluster node indices are {cluster_node_indices}")
+            print(
+                f"Cluster node indices of {low_cluster.get_name()} are {cluster_node_indices}"
+            )
 
         if self.verbose:
-            print(f"Local graph node indices are {local_graph_node_indices}")
-
-        pbar = (
-            tqdm(total=cluster_node_indices.shape[0])
-            if self.show_progress
-            else None
-        )
+            print(
+                f"Local graph node indices of {low_cluster.get_name()} are {local_graph_node_indices}"
+            )
+        if self.show_progress:
+            if len(nodes_in_high_clusters) > 0:
+                pbar = tqdm(total=cluster_node_indices.shape[0])
+            else:
+                pbar = tqdm(total=1)
 
         if (
             self.show_progress
         ):  # in case of only one node in cluster and no parent, close manually
-            if len(cluster_node_indices) == 1:
-                x = cluster_node_indices[0]
+            # if len(cluster_node_indices) == 1:
+            #     x = cluster_node_indices[0]
+            #     pbar.reset()
+            #     pbar.update()
+            #     pbar.set_description(
+            #         f"Into: ->{low_cluster.get_name()}, Depth={depth}, working on node {x}"
+            #     )
+            # For highest clusters, there are no parents, so we have to close manually
+            if len(nodes_in_high_clusters) == 0:
                 pbar.reset()
                 pbar.update()
                 pbar.set_description(
-                    f"Into: ->{low_cluster.get_name()}, Depth={depth}, working on node {x}"
+                    f"Into: ->{low_cluster.get_name()}, no parents, nothing to do  "
                 )
         # pbar = pbar
 
@@ -313,6 +330,7 @@ class ClusterPC:
             self.cdag.max_nonchilds_of_cluster_nodes(low_cluster, local_graph)
             - 1
             > depth
+            and len(nodes_in_high_clusters) > 0
         ):
             depth += 1
             edge_removal = []
@@ -342,6 +360,8 @@ class ClusterPC:
                 cluster_mask = np.isin(Nonchilds_x, cluster_node_indices)
                 Pa_x_outside_cluster = Nonchilds_x[~cluster_mask]
                 # Neigh_x_in_clust = Neigh_x[cluster_mask]
+                if len(Nonchilds_x) < depth - 1:
+                    continue
                 if self.verbose:
                     print(
                         f"Parents of {x} in pa({low_cluster.get_name()})"
@@ -349,8 +369,7 @@ class ClusterPC:
                     )
                 # local_mask = np.isin(Neigh_x, local_graph_node_indices)
                 # possible_blocking_nodes = Neigh_x[local_mask]
-                if len(Nonchilds_x) < depth - 1:
-                    continue
+
                 for y in Pa_x_outside_cluster:
                     if self.verbose:
                         print("Testing edges from %d to %d" % (x, y))
@@ -479,12 +498,16 @@ class ClusterPC:
         # Possibly replace subgraph_cluster and local_graph by index_arrays,
         # as have to operate on entire adjacency matrix and data matrix
         if self.verbose:
-            print(f"Cluster node indices are {cluster_node_indices}")
+            print(
+                f"Cluster node indices of {cluster.get_name()} are {cluster_node_indices}"
+            )
         local_graph_node_indices = np.array(
             [self.cdag.cg.G.node_map[node] for node in local_graph.G.nodes]
         )
         if self.verbose:
-            print(f"Local graph node indices are {cluster_node_indices}")
+            print(
+                f"Local graph node indices of {cluster.get_name()} are {cluster_node_indices}"
+            )
 
         pbar = (
             tqdm(total=cluster_node_indices.shape[0])
