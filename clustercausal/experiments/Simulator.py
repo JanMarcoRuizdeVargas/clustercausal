@@ -43,7 +43,7 @@ class Simulator:
         dag_method="erdos_renyi",
         n_clusters=None,
         # n_c_edges=None,
-        weight_range=(-1, 2),
+        weight_range=[-1, 2],
         distribution_type="gauss",
         scm_method="linear",
         sample_size=10000,
@@ -61,7 +61,7 @@ class Simulator:
         self.dag_method = dag_method
         self.n_clusters = n_clusters
         # self.n_c_edges = n_c_edges
-        self.weight_range = weight_range
+        self.weight_range = tuple(weight_range)
         self.distribution_type = distribution_type
         self.scm_method = scm_method
         self.sample_size = sample_size
