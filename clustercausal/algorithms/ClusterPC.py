@@ -324,8 +324,9 @@ class ClusterPC:
         # but as potential separating sets we consider cluster union cluster parents
         # Therefore stopping criterion is when separating set cardinality
         # exceed nonchilds in cluster
-
         # Skeleton discovery
+        end_prep = time.time()
+        print(f"Preparation time was {end_prep - start_into:.2f}sec")
         while (
             self.cdag.max_nonchilds_of_cluster_nodes(low_cluster, local_graph)
             - 1
@@ -333,6 +334,7 @@ class ClusterPC:
             and len(nodes_in_high_clusters) > 0
         ):
             depth += 1
+            depth_start = time.time()
             edge_removal = []
             if self.show_progress:
                 pbar.reset()
@@ -346,15 +348,16 @@ class ClusterPC:
                 # Get all nonchilds of node_x in the entire cg,  which is same as
                 # neighbors in cluster union parents of cluster
                 # format is integer values in adjacency matrix
-                Neigh_x = self.cdag.cg.neighbors(x)
-                node_x = ClusterDAG.get_key_by_value(
-                    self.cdag.cg.G.node_map, x
-                )
-                Child_x_nodes = self.cdag.cg.G.get_children(node_x)
-                Child_x_indices = [
-                    self.cdag.cg.G.node_map[node] for node in Child_x_nodes
-                ]
-                Nonchilds_x = np.setdiff1d(Neigh_x, Child_x_indices)
+                # Neigh_x = self.cdag.cg.neighbors(x)
+                # node_x = ClusterDAG.get_key_by_value(
+                #     self.cdag.cg.G.node_map, x
+                # )
+                # Child_x_nodes = self.cdag.cg.G.get_children(node_x)
+                # Child_x_indices = [
+                #     self.cdag.cg.G.node_map[node] for node in Child_x_nodes
+                # ]
+                # Nonchilds_x = np.setdiff1d(Neigh_x, Child_x_indices)
+                Nonchilds_x = self.cdag.get_nonchilds(x)
                 # if self.verbose: print(f'Neighbors of {x} is {Neigh_x}')
                 # Remove neighbors that are not in local_graph or are in cluster
                 cluster_mask = np.isin(Nonchilds_x, cluster_node_indices)
@@ -444,6 +447,8 @@ class ClusterPC:
             local_graph = self.cdag.get_local_graph(low_cluster)
             # print('LOCAL GRAPH DRAWN BELOW')
             # local_graph.draw_pydot_graph()
+            depth_end = time.time()
+            print(f"Depth {depth} took {depth_end - depth_start:.2f}sec")
         end_into = time.time()
         time_elapsed = end_into - start_into
         if self.show_progress:

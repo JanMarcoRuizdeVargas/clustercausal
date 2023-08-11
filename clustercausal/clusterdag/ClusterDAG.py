@@ -248,6 +248,17 @@ class ClusterDAG:
         local_graph.G = self.subgraph(relevant_nodes)
         return local_graph
 
+    def get_nonchilds(self, node_index: int) -> list:
+        """
+        Returns the indices of the nonchilds of a node
+        """
+        Neigh_x = self.cg.neighbors(node_index)
+        node_x = ClusterDAG.get_key_by_value(self.cg.G.node_map, node_index)
+        Child_x_nodes = self.cg.G.get_children(node_x)
+        Child_x_indices = [self.cg.G.node_map[node] for node in Child_x_nodes]
+        Nonchilds_x = np.setdiff1d(Neigh_x, Child_x_indices)
+        return Nonchilds_x
+
     def subgraph(self, nodes: List[Node]) -> GeneralGraph:
         """
         Returns a subgraph, where the nodes are the ones in the list nodes
