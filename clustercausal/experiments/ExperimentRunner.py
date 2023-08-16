@@ -3,6 +3,8 @@ import yaml
 import itertools
 import os
 import datetime
+import numpy as np
+import pickle
 
 from causallearn.search.ConstraintBased.PC import pc
 
@@ -68,6 +70,8 @@ class ExperimentRunner:
         """
         Run experiments with a grid of configurations
         """
+        self.gridsearch_name = f"{self.discovery_alg[0]}_{str(datetime.datetime.now()).replace(':', '-')}"
+
         if self.linear_config is not None:
             lin_param_configuration = list(
                 itertools.product(*self.linear_config.values())
@@ -91,7 +95,7 @@ class ExperimentRunner:
             self.linear_config.keys()
         )  # for names doesn't matter linear or nonlinear
         param_dict = dict(zip(param_names, params))
-        print(f"Running experiment with parameters: {param_dict}")
+        # print(f"Running experiment with parameters: {param_dict}")
         # run simulation
         simulation = Simulator(**param_dict)
         cluster_dag = simulation.run()
@@ -150,28 +154,82 @@ class ExperimentRunner:
         }
 
         # save results
-        gridsearch_name = f"{self.discovery_alg[0]}_{str(datetime.datetime.now()).replace(':', '-')}"
         folder_name = (
             param_dict["dag_method"]
-            + f" {param_dict['n_nodes']} nodes"
-            + f" {param_dict['distribution_type']} distribution"
+            + f"_{param_dict['n_nodes']}_nodes"
+            + f"_{param_dict['n_edges']}_edges"
+            + f"_{param_dict['n_clusters']}_clusters"
+            + f"_{param_dict['distribution_type']}"
         )
         file_path = os.path.join(
             "clustercausal",
             "experiments",
             "results",
-            gridsearch_name,
+            self.gridsearch_name,
             folder_name,
         )
         if not os.path.exists(file_path):
             os.makedirs(file_path)
 
-        file_name_cluster = "cluster_evaluation_results.yaml"
-        file_path_cluster = os.path.join(file_path, file_name_cluster)
-        with open(file_path_cluster, "w") as file:
-            yaml.dump(cluster_evaluation_results, file)
+        # Ensure python scalars for readability
+        def numpy_to_python(value):
+            if isinstance(value, np.generic):
+                return value.item()
+            return value
 
-        file_name_base = "base_evaluation_results.yaml"
-        file_path_base = os.path.join(file_path, file_name_base)
-        with open(file_path_base, "w") as file:
-            yaml.dump(base_evaluation_results, file)
+        cluster_evaluation_results = {
+            k: numpy_to_python(v)
+            for k, v in cluster_evaluation_results.items()
+        }
+        base_evaluation_results = {
+            k: numpy_to_python(v) for k, v in base_evaluation_results.items()
+        }
+
+        settings_results = {
+            "n_nodes": simulation.n_nodes,
+            "n_edges": simulation.n_edges,
+            "n_clusters": simulation.n_clusters,
+            "dag_method": simulation.dag_method,
+            "distribution_type": simulation.distribution_type,
+            "scm_method": simulation.scm_method,
+            "weight_range": simulation.weight_range,
+            "sample_size": simulation.sample_size,
+            "seed": simulation.seed,
+            "noise_scale": simulation.noise_scale,
+            # "n_c_edges": simulation.n_c_edges,
+        }
+        results = {
+            "settings": settings_results,
+            "cluster_evaluation_results": cluster_evaluation_results,
+            "base_evaluation_results": base_evaluation_results,
+        }
+
+        file_name = "results.yaml"
+        sub_path = os.path.join(file_path, file_name)
+        with open(sub_path, "w") as file:
+            yaml.dump(results, file)
+
+        file_name = "cluster_est_graph.pkl"
+        sub_path = os.path.join(file_path, file_name)
+        with open(sub_path, "wb") as file:
+            pickle.dump(cluster_est_graph, file)
+
+        file_name = "base_est_graph.pkl"
+        sub_path = os.path.join(file_path, file_name)
+        with open(sub_path, "wb") as file:
+            pickle.dump(base_est_graph, file)
+
+        file_name = "cluster_dag.pkl"
+        sub_path = os.path.join(file_path, file_name)
+        with open(sub_path, "wb") as file:
+            pickle.dump(cluster_dag, file)
+
+        # file_name_cluster = "cluster_evaluation_results.yaml"
+        # file_path_cluster = os.path.join(file_path, file_name_cluster)
+        # with open(file_path_cluster, "w") as file:
+        #     yaml.dump(cluster_evaluation_results, file)
+
+        # file_name_base = "base_evaluation_results.yaml"
+        # file_path_base = os.path.join(file_path, file_name_base)
+        # with open(file_path_base, "w") as file:
+        #     yaml.dump(base_evaluation_results, file)

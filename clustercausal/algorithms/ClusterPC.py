@@ -215,6 +215,7 @@ class ClusterPC:
             )
         else:
             raise ValueError("uc_rule should be in [0, 1, 2]")
+        self.cdag.cg.G.reconstitute_dpath(self.cdag.cg.G.get_graph_edges())
         self.cdag.cg = cg
         end = time.time()
         self.cdag.cg.PC_elapsed = end - start
