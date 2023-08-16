@@ -326,7 +326,7 @@ class ClusterPC:
         # exceed nonchilds in cluster
         # Skeleton discovery
         end_prep = time.time()
-        print(f"Preparation time was {end_prep - start_into:.2f}sec")
+        # print(f"Preparation time was {end_prep - start_into:.2f}sec")
         while (
             self.cdag.max_nonchilds_of_cluster_nodes(low_cluster, local_graph)
             - 1
@@ -448,7 +448,7 @@ class ClusterPC:
             # print('LOCAL GRAPH DRAWN BELOW')
             # local_graph.draw_pydot_graph()
             depth_end = time.time()
-            print(f"Depth {depth} took {depth_end - depth_start:.2f}sec")
+            # print(f"Depth {depth} took {depth_end - depth_start:.2f}sec")
         end_into = time.time()
         time_elapsed = end_into - start_into
         if self.show_progress:
