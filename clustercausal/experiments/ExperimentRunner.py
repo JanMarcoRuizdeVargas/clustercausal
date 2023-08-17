@@ -164,7 +164,7 @@ class ExperimentRunner:
         file_path = os.path.join(
             "clustercausal",
             "experiments",
-            "results",
+            "_results",
             self.gridsearch_name,
             folder_name,
         )

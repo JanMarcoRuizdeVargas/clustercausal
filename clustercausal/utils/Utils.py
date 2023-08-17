@@ -1,6 +1,11 @@
 import numpy as np
 import random
+import os
+import yaml
+import pandas as pd
+
 import causallearn
+
 from clustercausal.clusterdag.ClusterDAG import ClusterDAG
 
 
@@ -49,3 +54,45 @@ def is_valid_clustering(cdag, causal_graph):
         instance of CausalGraph class
     """
     pass
+
+
+def load_experiment(experiment_folder):
+    # Path to the results.yaml file in the first directory
+    result_yaml = os.path.normpath(
+        os.path.join(experiment_folder, "results.yaml")
+    )
+
+    # Check if results.yaml exists
+    if os.path.exists(result_yaml):
+        # Open the results.yaml file with YAML
+        with open(result_yaml, "r") as file:
+            result_dict = yaml.load(file, Loader=yaml.FullLoader)
+    return result_dict
+
+
+def load_data(directory):
+    # directory = gridsearch_directory
+    # e.g. clustercausal/experiments/results/ClusterPC_2023-08-16 14-23-07.067298
+    # Define the base directory
+    columns = None
+    experiment_folders = os.listdir(directory)
+    for experiment in experiment_folders:
+        experiment_path = os.path.join(directory, experiment)
+        result_dict = load_experiment(experiment_path)
+        if columns is None:
+            columns = []
+            for key in result_dict["base_evaluation_results"].keys():
+                columns.append("base_" + key)
+            for key in result_dict["cluster_evaluation_results"].keys():
+                columns.append("cluster_" + key)
+            for key in result_dict["settings"].keys():
+                columns.append(key)
+            data = pd.DataFrame(columns=columns)
+        values = []
+        for upper_key in result_dict:
+            for key in result_dict[upper_key]:
+                values.append(result_dict[upper_key][key])
+        data = pd.concat(
+            [data, pd.DataFrame([values], columns=columns)], ignore_index=True
+        )
+    return data

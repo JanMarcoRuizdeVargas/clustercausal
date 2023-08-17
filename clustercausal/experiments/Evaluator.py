@@ -86,6 +86,15 @@ class Evaluator:
         adjacency_confusion["true_negative"] = adj_conf.get_adj_tn()
         adjacency_confusion["precision"] = adj_conf.get_adj_precision()
         adjacency_confusion["recall"] = adj_conf.get_adj_recall()
+        adjacency_confusion["f1_score"] = (
+            2
+            * adjacency_confusion["precision"]
+            * adjacency_confusion["recall"]
+            / (
+                adjacency_confusion["precision"]
+                + adjacency_confusion["recall"]
+            )
+        )
         self.adjacency_confusion = adjacency_confusion
         return adjacency_confusion
 
@@ -106,12 +115,24 @@ class Evaluator:
         arrow_confusion["true_negative"] = arrow_conf.get_arrows_tn()
         arrow_confusion["precision"] = arrow_conf.get_arrows_precision()
         arrow_confusion["recall"] = arrow_conf.get_arrows_recall()
+        arrow_confusion["f1_score"] = (
+            2
+            * arrow_confusion["precision"]
+            * arrow_confusion["recall"]
+            / (arrow_confusion["precision"] + arrow_confusion["recall"])
+        )
         arrow_confusion["true_positive_ce"] = arrow_conf.get_arrows_tp_ce()
         arrow_confusion["false_positive_ce"] = arrow_conf.get_arrows_fp_ce()
         arrow_confusion["false_negative_ce"] = arrow_conf.get_arrows_fn_ce()
         arrow_confusion["true_negative_ce"] = arrow_conf.get_arrows_tn_ce()
         arrow_confusion["precision_ce"] = arrow_conf.get_arrows_precision_ce()
         arrow_confusion["recall_ce"] = arrow_conf.get_arrows_recall_ce()
+        arrow_confusion["f1_score_ce"] = (
+            2
+            * arrow_confusion["precision_ce"]
+            * arrow_confusion["recall_ce"]
+            / (arrow_confusion["precision_ce"] + arrow_confusion["recall_ce"])
+        )
         self.arrow_confusion = arrow_confusion
         return arrow_confusion
 

@@ -2,3 +2,4 @@ mthesis
 env
 .vscode/
 clustercausal/experiments/results
+clustercausal/experiments/_results
