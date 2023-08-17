@@ -3,6 +3,7 @@ import random
 import os
 import yaml
 import pandas as pd
+import pickle
 
 import causallearn
 
@@ -96,3 +97,87 @@ def load_data(directory):
             [data, pd.DataFrame([values], columns=columns)], ignore_index=True
         )
     return data
+
+
+def load_experiment_graphs(experiment_folder):
+    """
+    Loads the base_est, cluster_est and cluster_dag from an experiment folder
+    Parameters
+    ----------
+    experiment_folder : str
+        Path to the experiment folder
+
+    Returns
+    -------
+    base_est : CausalGraph
+        Estimated causal graph from base method
+    cluster_est : CausalGraph
+        Estimated causal graph from cluster method
+    cluster_dag : ClusterDAG
+        Estimated cluster DAG from cluster method
+    """
+    base_est_path = os.path.join(experiment_folder, "base_est_graph.pkl")
+    cluster_est_path = os.path.join(experiment_folder, "cluster_est_graph.pkl")
+    cluster_dag_path = os.path.join(experiment_folder, "cluster_dag.pkl")
+    if os.path.exists(base_est_path):
+        with open(base_est_path, "rb") as file:
+            base_est_graph = pickle.load(file)
+    if os.path.exists(cluster_est_path):
+        with open(cluster_est_path, "rb") as file:
+            cluster_est_graph = pickle.load(file)
+    if os.path.exists(cluster_dag_path):
+        with open(cluster_dag_path, "rb") as file:
+            cluster_dag = pickle.load(file)
+    return base_est_graph, cluster_est_graph, cluster_dag
+
+
+def causallearn_to_nx_adjmat(adjmat: np.ndarray) -> np.ndarray:
+    """
+    Convert a causallearn adjacency matrix to a networkx adjacency matrix
+    i.e. tail ends get converted from -1 to 0
+    Parameters
+    ----------
+    adjmat : np.ndarray
+        Adjacency matrix from causallearn
+
+    Returns
+    -------
+    nx_adjmat : np.ndarray
+        Adjacency matrix for networkx
+    """
+    nx_adjmat = np.zeros(adjmat.shape)
+    for i in range(adjmat.shape[0]):
+        for j in range(adjmat.shape[1]):
+            if adjmat[i, j] == -1 and adjmat[j, i] == 1:
+                nx_adjmat[i, j] = 1
+                nx_adjmat[j, i] = 0
+            if adjmat[i, j] == -1 and adjmat[j, i] == -1:
+                nx_adjmat[i, j] = 1
+                nx_adjmat[j, i] = 1
+    return nx_adjmat
+
+
+def nx_to_causallearn_adjmat(adjmat: np.ndarray) -> np.ndarray:
+    """
+    Convert a networkx adjacency matrix to a causallearn adjacency matrix
+    i.e. tail ends get converted from 0 to -1
+    Parameters
+    ----------
+    adjmat : np.ndarray
+        Adjacency matrix from networkx
+
+    Returns
+    -------
+    causallearn_adjmat : np.ndarray
+        Adjacency matrix for causallearn
+    """
+    causallearn_adjmat = np.zeros(adjmat.shape)
+    for i in range(adjmat.shape[0]):
+        for j in range(adjmat.shape[1]):
+            if adjmat[i, j] == 1 and adjmat[j, i] == 0:
+                causallearn_adjmat[i, j] = -1
+                causallearn_adjmat[j, i] = 1
+            if adjmat[i, j] == 1 and adjmat[j, i] == 1:
+                causallearn_adjmat[i, j] = -1
+                causallearn_adjmat[j, i] = -1
+    return causallearn_adjmat

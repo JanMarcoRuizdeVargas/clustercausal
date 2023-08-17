@@ -1,0 +1,34 @@
+# A sample yaml with all possible configs
+# Config settings: n_nodes, n_edges, dag_method, n_clusters, weight_range, lin_distribution_type, 
+#                 nonlin_distribution_type, scm_method, sample_size, seed, node_names, noise_scale
+
+# Should always be only one, will be popped away in ExperimentRunner
+discovery_alg : ['ClusterPC']
+
+# any integer between 2 and 50
+n_nodes: [10, 20, 30]
+
+# will not be exactly graph edges due to gcastle dag generator, might be less edges
+n_edges: [30, 45, 71]
+
+dag_method: ['erdos_renyi', 'scale_free', 'hierarchical']
+
+n_clusters: [3, 5]
+
+weight_range: 
+  - [-1,2]
+
+lin_distribution_type: ['gauss', 'exp', 'gumbel']
+
+nonlin_distribution_type: ['mlp', 'mim', 'gp']
+
+scm_method: ['linear', 'nonlinear']
+
+sample_size: [1000]
+
+seed: [null]
+
+node_names: [null]
+
+noise_scale: [1]
+
