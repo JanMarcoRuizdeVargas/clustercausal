@@ -50,6 +50,7 @@ class Simulator:
         seed=42,
         node_names=None,
         noise_scale=1.0,
+        alpha=0.05,
     ):
         """
         Initialize an instance, set parameters
@@ -68,6 +69,7 @@ class Simulator:
         self.seed = seed
         self.node_names = node_names
         self.noise_scale = noise_scale
+        self.alpha = alpha
 
     def run(self) -> ClusterDAG:
         """

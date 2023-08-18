@@ -40,6 +40,7 @@ def test_clust_pc_to_base_pc():
         adjacency_confusion,
         arrow_confusion,
         shd,
+        sid,
     ) = evaluation.get_causallearn_metrics()
 
     causallearn_cg = pc(
@@ -52,10 +53,12 @@ def test_clust_pc_to_base_pc():
         cl_adjacency_confusion,
         cl_arrow_confusion,
         cl_shd,
+        cl_si,
     ) = evaluation_causallearn.get_causallearn_metrics()
     assert adjacency_confusion == cl_adjacency_confusion
     assert arrow_confusion == cl_arrow_confusion
     assert shd == cl_shd
+    assert sid == cl_si
     # Check isomorphism
     est_graph.to_nx_graph()
     causallearn_cg.to_nx_graph()
@@ -79,6 +82,7 @@ def test_clust_pc_to_base_pc():
         adjacency_confusion,
         arrow_confusion,
         shd,
+        sid,
     ) = evaluation.get_causallearn_metrics()
 
     causallearn_cg = pc(
@@ -91,10 +95,12 @@ def test_clust_pc_to_base_pc():
         cl_adjacency_confusion,
         cl_arrow_confusion,
         cl_shd,
+        cl_sid,
     ) = evaluation_causallearn.get_causallearn_metrics()
     assert adjacency_confusion == cl_adjacency_confusion
     assert arrow_confusion == cl_arrow_confusion
     assert shd == cl_shd
+    assert sid == cl_sid
     # Check isomorphism
     est_graph.to_nx_graph()
     causallearn_cg.to_nx_graph()
@@ -118,6 +124,7 @@ def test_clust_pc_to_base_pc():
         adjacency_confusion,
         arrow_confusion,
         shd,
+        sid,
     ) = evaluation.get_causallearn_metrics()
 
     causallearn_cg = pc(
@@ -130,10 +137,12 @@ def test_clust_pc_to_base_pc():
         cl_adjacency_confusion,
         cl_arrow_confusion,
         cl_shd,
+        cl_sid,
     ) = evaluation_causallearn.get_causallearn_metrics()
     assert adjacency_confusion == cl_adjacency_confusion
     assert arrow_confusion == cl_arrow_confusion
     assert shd == cl_shd
+    assert sid == cl_sid
     # Check isomorphism
     est_graph.to_nx_graph()
     causallearn_cg.to_nx_graph()

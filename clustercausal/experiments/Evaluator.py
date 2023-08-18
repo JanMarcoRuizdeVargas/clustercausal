@@ -3,6 +3,7 @@ import pandas as pd
 import networkx as nx
 import causallearn
 import castle
+import os
 
 # Import causallearn metrics
 from causallearn.graph.AdjacencyConfusion import AdjacencyConfusion
@@ -11,7 +12,15 @@ from causallearn.graph.SHD import SHD
 from causallearn.graph.Graph import Graph
 from causallearn.graph.Endpoint import Endpoint
 
+from cdt.metrics import SID, SID_CPDAG, get_CPDAG
+
 from clustercausal.clusterdag.ClusterDAG import ClusterDAG
+from clustercausal.utils.Utils import *
+
+os.environ[
+    "R_HOME"
+] = "C:\Program Files\R\R-4.3.1"  # replace with the actual R home directory
+import rpy2.robjects as robjects
 
 
 class Evaluator:
@@ -54,19 +63,24 @@ class Evaluator:
 
     def get_causallearn_metrics(self):
         """
+        Name outdated, with cdt sid metric
         Calculate all causallearn metrics
             -adjacency confusion
             -arrow confusion
             -structural hamming distance
+            -structural intervention distance from cdt
         Returns:
             -adjacency_confusion: dictionary
             -arrow_confusion: dictionary
             -shd: int
+            -sid: (int, int) tuple, lower and upper bounds
         """
         adjacency_confusion = self.get_adjacency_confusion()
         arrow_confusion = self.get_arrow_confusion()
         shd = self.get_shd()
-        return adjacency_confusion, arrow_confusion, shd
+        sid = self.get_sid_bounds()
+
+        return adjacency_confusion, arrow_confusion, shd, sid
 
     def get_adjacency_confusion(self):
         """
@@ -147,3 +161,18 @@ class Evaluator:
         shd = SHD(self.truth, self.est)
         self.shd = shd.get_shd()
         return self.shd
+
+    def get_sid_bounds(self):
+        """
+        Calculate the structural intervention distance bounds
+        from the causal discovery toolbox R wrapper
+
+        """
+        nx_truth = causallearn_to_nx_adjmat(self.truth.graph)
+        nx_est = causallearn_to_nx_adjmat(self.est.graph)
+        sid_lower, sid_upper = SID_CPDAG(nx_truth, get_CPDAG(nx_est))
+        sid = {}
+        sid["sid_lower"] = int(sid_lower)
+        sid["sid_upper"] = int(sid_upper)
+        self.sid = sid
+        return self.sid

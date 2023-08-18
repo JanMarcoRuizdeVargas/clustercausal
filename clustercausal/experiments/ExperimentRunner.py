@@ -5,12 +5,21 @@ import os
 import datetime
 import numpy as np
 import pickle
+import networkx as nx
 
 from causallearn.search.ConstraintBased.PC import pc
+
+# from cdt.metrics import SID, SID_CPDAG, get_CPDAG
 
 from clustercausal.experiments.Simulator import Simulator
 from clustercausal.experiments.Evaluator import Evaluator
 from clustercausal.algorithms.ClusterPC import ClusterPC
+from clustercausal.utils.Utils import *
+
+# os.environ[
+#     "R_HOME"
+# ] = "C:\Program Files\R\R-4.3.1"  # replace with the actual R home directory
+# import rpy2.robjects as robjects
 
 
 class ExperimentRunner:
@@ -34,6 +43,7 @@ class ExperimentRunner:
         distribution_types_nonlinear: ['lmp', 'mim', 'gp', 'gp-add', 'quadratic']
         scm_types: ['linear', 'nonlinear']
         noise_scale: [0.3, 1, 2, 5]
+        alpha: [0.01, 0.03, 0.05, 0.1]
         """
         with open(config_path, "r") as file:
             self.config = yaml.safe_load(file)
@@ -103,14 +113,17 @@ class ExperimentRunner:
         cluster_pc = ClusterPC(
             cdag=cluster_dag,
             data=cluster_dag.data,
-            alpha=0.05,
+            alpha=param_dict["alpha"],
             indep_test="fisherz",
             verbose=False,
             show_progress=False,
         )
         cluster_est_graph = cluster_pc.run()
         base_est_graph = pc(
-            cluster_dag.data, alpha=0.05, verbose=False, show_progress=False
+            cluster_dag.data,
+            alpha=param_dict["alpha"],
+            verbose=False,
+            show_progress=False,
         )
         # evaluate causal discovery
         cluster_evaluation = Evaluator(
@@ -120,6 +133,7 @@ class ExperimentRunner:
             cluster_adjacency_confusion,
             cluster_arrow_confusion,
             cluster_shd,
+            cluster_sid,
         ) = cluster_evaluation.get_causallearn_metrics()
         cluster_adjacency_confusion = {
             f"adj_{k}": v for k, v in cluster_adjacency_confusion.items()
@@ -131,6 +145,7 @@ class ExperimentRunner:
             **cluster_adjacency_confusion,
             **cluster_arrow_confusion,
             "cluster_shd": cluster_shd,
+            **cluster_sid,
         }
 
         base_evaluation = Evaluator(
@@ -140,6 +155,7 @@ class ExperimentRunner:
             base_adjacency_confusion,
             base_arrow_confusion,
             base_shd,
+            base_sid,
         ) = base_evaluation.get_causallearn_metrics()
         base_adjacency_confusion = {
             f"adj_{k}": v for k, v in base_adjacency_confusion.items()
@@ -151,7 +167,10 @@ class ExperimentRunner:
             **base_adjacency_confusion,
             **base_arrow_confusion,
             "base_shd": base_shd,
+            **base_sid,
         }
+
+        #
 
         # save results
         folder_name = (
@@ -185,6 +204,11 @@ class ExperimentRunner:
             k: numpy_to_python(v) for k, v in base_evaluation_results.items()
         }
 
+        true_sid_bounds_eval = Evaluator(
+            truth=cluster_dag.true_dag.G, est=cluster_dag.true_dag.G
+        )
+        true_sid_bounds = true_sid_bounds_eval.get_sid_bounds()
+
         settings_results = {
             "n_nodes": simulation.n_nodes,
             "n_edges": simulation.n_edges,
@@ -197,6 +221,9 @@ class ExperimentRunner:
             "seed": simulation.seed,
             "noise_scale": simulation.noise_scale,
             # "n_c_edges": simulation.n_c_edges,
+            "alpha": simulation.alpha,
+            "true_sid_lower": true_sid_bounds["sid_lower"],
+            "true_sid_upper": true_sid_bounds["sid_upper"],
         }
         results = {
             "settings": settings_results,
