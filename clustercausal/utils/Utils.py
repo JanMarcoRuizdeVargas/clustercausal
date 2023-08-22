@@ -68,6 +68,10 @@ def load_experiment(experiment_folder):
         # Open the results.yaml file with YAML
         with open(result_yaml, "r") as file:
             result_dict = yaml.load(file, Loader=yaml.FullLoader)
+        if result_dict == None:
+            raise ValueError(
+                "results.yaml is not available, experiment folder is empty"
+            )
     return result_dict
 
 
@@ -96,6 +100,15 @@ def load_data(directory):
         data = pd.concat(
             [data, pd.DataFrame([values], columns=columns)], ignore_index=True
         )
+    for col in data.columns:
+        if col not in [
+            "dag_method",
+            "distribution_type",
+            "scm_method",
+            "seed",
+            "weight_range",
+        ]:
+            data[col] = data[col].astype(float)
     return data
 
 

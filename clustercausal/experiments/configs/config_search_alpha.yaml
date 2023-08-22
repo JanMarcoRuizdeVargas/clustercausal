@@ -6,21 +6,21 @@
 discovery_alg : ['ClusterPC']
 
 # any integer between 2 and 50
-n_nodes: [10, 20, 30]
+n_nodes: [10, 15]
 
 # will not be exactly graph edges due to gcastle dag generator, might be less edges
-n_edges: [30, 45, 71]
+n_edges: [15, 30]
 
 dag_method: ['erdos_renyi', 'scale_free', 'hierarchical']
 
-n_clusters: [3, 5, 7]
+n_clusters: [4]
 
 weight_range: 
   - [-1,2]
 
 lin_distribution_type: ['gauss', 'exp', 'gumbel']
 
-nonlin_distribution_type: ['mlp', 'gp']
+nonlin_distribution_type: ['mlp']
 
 scm_method: ['linear', 'nonlinear']
 

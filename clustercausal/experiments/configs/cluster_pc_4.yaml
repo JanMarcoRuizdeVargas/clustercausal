@@ -6,25 +6,25 @@
 discovery_alg : ['ClusterPC']
 
 # any integer between 2 and 50
-n_nodes: [10, 15]
+n_nodes: [80, 100]
 
 # will not be exactly graph edges due to gcastle dag generator, might be less edges
-n_edges: [15, 30]
+n_edges: [132, 199]
 
 dag_method: ['erdos_renyi', 'scale_free', 'hierarchical']
 
-n_clusters: [4]
+n_clusters: [3, 5, 7, 10]
 
 weight_range: 
   - [-1,2]
 
 lin_distribution_type: ['gauss', 'exp', 'gumbel']
 
-nonlin_distribution_type: ['mlp']
+nonlin_distribution_type: ['mlp', 'mim', 'gp']
 
 scm_method: ['linear', 'nonlinear']
 
-sample_size: [100, 500, 1000, 5000]
+sample_size: [1000]
 
 seed: [null]
 
@@ -33,3 +33,4 @@ node_names: [null]
 noise_scale: [1]
 
 alpha: [0.05]
+

@@ -363,6 +363,8 @@ class ClusterPC:
                 # Remove neighbors that are not in local_graph or are in cluster
                 cluster_mask = np.isin(Nonchilds_x, cluster_node_indices)
                 Pa_x_outside_cluster = Nonchilds_x[~cluster_mask]
+                local_mask = np.isin(Nonchilds_x, local_graph_node_indices)
+                Nonchilds_x_local_graph = Nonchilds_x[local_mask]
                 # Neigh_x_in_clust = Neigh_x[cluster_mask]
                 if len(Nonchilds_x) < depth - 1:
                     continue
@@ -380,11 +382,11 @@ class ClusterPC:
                     # No other background knowledge functionality supported for now
                     # No parent checking for mns separation supported for now TODO
                     sepsets = set()
-                    Pa_x_no_y = np.delete(
-                        Pa_x_outside_cluster,
-                        np.where(Pa_x_outside_cluster == y),
+                    Nonchilds_x_local_graph_no_y = np.delete(
+                        Nonchilds_x_local_graph,
+                        np.where(Nonchilds_x_local_graph == y),
                     )
-                    for S in combinations(Pa_x_no_y, depth):
+                    for S in combinations(Nonchilds_x_local_graph_no_y, depth):
                         # print(f'Set S to be tested is {S}')
                         p = self.cdag.cg.ci_test(x, y, S)
                         if p > self.alpha:

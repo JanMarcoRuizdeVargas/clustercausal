@@ -2,6 +2,7 @@ import causallearn
 import yaml
 import itertools
 import os
+import time
 import datetime
 import numpy as np
 import pickle
@@ -179,6 +180,7 @@ class ExperimentRunner:
             + f"_{param_dict['n_edges']}_edges"
             + f"_{param_dict['n_clusters']}_clusters"
             + f"_{param_dict['distribution_type']}"
+            + str(time.strftime("%H-%M-%S"))
         )
         file_path = os.path.join(
             "clustercausal",
