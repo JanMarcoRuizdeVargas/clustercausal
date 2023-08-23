@@ -106,8 +106,7 @@ class ClusterDAG:
     def cdag_to_mpdag(self) -> CausalGraph:
         """
         Constructs a MPDAG (maximally partially directed DAG)
-        from a CDAG and stores it in a causallearn
-        BackgroundKnowledge object.
+        from a CDAG and stores it in a causallearn CausalGraph.
         """
         # Create the list of node_names needed for CausalGraph
         self.cg = CausalGraph(
@@ -224,6 +223,18 @@ class ClusterDAG:
             relevant_nodes.append(self.get_node_by_name(node_name, self.cg))
         return relevant_clusters, relevant_nodes
 
+    def max_degree_of_cluster_parents(self, cluster: Node) -> int:
+        # First element is cluster itself, remove it
+        # cluster_parents is Node instance
+        cluster_parents, _ = self.get_parents_plus(cluster)
+        cluster_parents.pop(0)
+        cluster_parents_max_degree = 0
+        for clust_parent in cluster_parents:
+            deg = self.max_degree_of_cluster(clust_parent)
+            if deg > cluster_parents_max_degree:
+                cluster_parents_max_degree = deg
+        return cluster_parents_max_degree
+
     def get_local_graph(self, cluster: Node) -> CausalGraph:
         """
         Define the local graph on which to run the intra cluster phase, restrict data
@@ -328,6 +339,34 @@ class ClusterDAG:
             global_indice_to_local_indice[global_indice] = local_indice
         return global_indice_to_local_indice
 
+    def max_degree_of_cluster(self, cluster: Node) -> int:
+        """
+        Calculates the max degree of nodes in the cluster
+        within the self.cg CausalGraph
+        """
+        max_degree = 0
+        nodes_in_cluster = self.cluster_mapping[cluster.get_name()]
+        for node_name in nodes_in_cluster:
+            node = self.get_node_by_name(node_name, self.cg)
+            deg = self.cg.G.get_degree(node)
+            if deg > max_degree:
+                max_degree = deg
+        return max_degree
+
+    def max_nonchild_degree_of_cluster(self, cluster: Node) -> int:
+        """
+        Calculates the max nonchild degree of nodes in the cluster
+        within the self.cg CausalGraph
+        """
+        max_degree = 0
+        nodes_in_cluster = self.cluster_mapping[cluster.get_name()]
+        for node_name in nodes_in_cluster:
+            node = self.get_node_by_name(node_name, self.cg)
+            deg = len(self.get_nonchilds(self.cg.G.node_map[node]))
+            if deg > max_degree:
+                max_degree = deg
+        return max_degree
+
     def max_nonchilds_of_cluster_nodes(
         self, cluster: Node, graph_to_use: CausalGraph
     ) -> int:
@@ -340,8 +379,10 @@ class ClusterDAG:
         graph_to_use (CausalGraph object)
         Returns:
         Integer, maximum amount of nonchilds of any node in the cluster
+        --- in NewClusterPC will be replaced by max_degree_of_cluster
+        --- and max_nonchild_degree_of_cluster
         """
-        max_degree = -1
+        max_degree = 0
         nodes_in_cluster = self.cluster_mapping[cluster.get_name()]
         for node_name in nodes_in_cluster:
             node = self.get_node_by_name(node_name, graph_to_use)

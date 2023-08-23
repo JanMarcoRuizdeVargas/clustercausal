@@ -171,9 +171,57 @@ def test_get_local_graph_and_subgraph():
     pass
 
 
-def test_max_nonchilds_of_cluster_nodes():
-    # TODO
-    pass
+def test_max_degree_of_cluster_and_max_nonchild_degree_of_cluster_and_max_degree_of_cluster_parents():
+    debug_nodes = ["0", "1", "2", "3", "4", "5", "6", "7"]
+    debug_edges = [
+        ("0", "1"),
+        ("2", "1"),
+        ("2", "7"),
+        ("1", "6"),
+        ("0", "5"),
+        ("3", "5"),
+        ("4", "6"),
+        ("3", "6"),
+        ("5", "6"),
+        ("6", "7"),
+        ("7", "8"),
+        ("8", "9"),
+    ]
+    debug_cluster_mapping = {
+        "X": ["0", "1", "2"],
+        "Y": ["3", "4"],
+        "Z": ["5", "6", "7"],
+        "S": ["8", "9"],
+    }
+    debug_cluster_edges = [("X", "Z"), ("Y", "Z"), ("Z", "S")]
+    debug_no_clust_mapping = {
+        "A": ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]
+    }
+    debug_no_clust_edges = []
+    cdag = ClusterDAG(debug_cluster_mapping, debug_cluster_edges)
+    no_clust_cdag = ClusterDAG(debug_no_clust_mapping, debug_no_clust_edges)
+    cdag.cdag_to_mpdag()
+    no_clust_cdag.cdag_to_mpdag()
+    cdag = ClusterDAG(debug_cluster_mapping, debug_cluster_edges)
+    no_clust_cdag = ClusterDAG(debug_no_clust_mapping, debug_no_clust_edges)
+    cdag.cdag_to_mpdag()
+    no_clust_cdag.cdag_to_mpdag()
+    X_cluster = cdag.get_node_by_name("X", cg=cdag.cluster_graph)
+    Y_cluster = cdag.get_node_by_name("Y", cg=cdag.cluster_graph)
+    Z_cluster = cdag.get_node_by_name("Z", cg=cdag.cluster_graph)
+    S_cluster = cdag.get_node_by_name("S", cg=cdag.cluster_graph)
+    assert cdag.max_degree_of_cluster(X_cluster) == 5
+    assert cdag.max_nonchild_degree_of_cluster(X_cluster) == 2
+    assert cdag.max_degree_of_cluster(Y_cluster) == 4
+    assert cdag.max_nonchild_degree_of_cluster(Y_cluster) == 1
+    assert cdag.max_degree_of_cluster(Z_cluster) == 9
+    assert cdag.max_nonchild_degree_of_cluster(Z_cluster) == 7
+    assert cdag.max_degree_of_cluster(S_cluster) == 4
+    assert cdag.max_nonchild_degree_of_cluster(S_cluster) == 4
+    assert cdag.max_degree_of_cluster_parents(X_cluster) == 0
+    assert cdag.max_degree_of_cluster_parents(Y_cluster) == 0
+    assert cdag.max_degree_of_cluster_parents(Z_cluster) == 5
+    assert cdag.max_degree_of_cluster_parents(S_cluster) == 9
 
 
 def test_get_node_indices_of_cluster():

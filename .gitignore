@@ -3,3 +3,4 @@ env
 .vscode/
 clustercausal/experiments/results
 clustercausal/experiments/_results
+clustercausal/experiments/archive_results
