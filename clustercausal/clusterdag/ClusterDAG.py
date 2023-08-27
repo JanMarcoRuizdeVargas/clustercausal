@@ -235,6 +235,25 @@ class ClusterDAG:
                 cluster_parents_max_degree = deg
         return cluster_parents_max_degree
 
+    def max_degree_of_cluster_parents_in_local_graph(
+        self, cluster: Node, local_graph
+    ) -> int:
+        # First element is cluster itself, remove it
+        # cluster_parents is Node instance
+        cluster_parents, _ = self.get_parents_plus(cluster)
+        cluster_parents.pop(0)
+        max_degree = 0
+        for clust_parent in cluster_parents:
+            for node in local_graph.G.nodes:
+                if (
+                    node.get_name()
+                    in self.cluster_mapping[clust_parent.get_name()]
+                ):
+                    deg = local_graph.G.get_degree(node)
+                    if deg > max_degree:
+                        max_degree = deg
+        return max_degree
+
     def get_local_graph(self, cluster: Node) -> CausalGraph:
         """
         Define the local graph on which to run the intra cluster phase, restrict data

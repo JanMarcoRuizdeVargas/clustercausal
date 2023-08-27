@@ -174,14 +174,28 @@ class ClusterPC:
                 f"Local graph node indices of {cluster.get_name()} are {local_graph_node_indices}"
             )
         if self.show_progress:
-            pbar = tqdm(total=cluster_node_indices.shape[0])
+            if len(local_graph_node_indices) == 1:
+                pbar = tqdm(total=1)
+                pbar.reset()
+                pbar.update()
+                pbar.set_description(
+                    f"{cluster.get_name()} phase, no nonchild, nothing to do"
+                )
+            else:
+                pbar = tqdm(total=cluster_node_indices.shape[0])
         # Depth loop
         # Depends on max nonchilds within cluster and max degree of parents
         # of cluster, as sets in neighbors of top cluster nodes are considered
         # as possible separating sets
         while (
-            self.cdag.max_nonchild_degree_of_cluster(cluster) > depth - 1
-        ) or (self.cdag.max_degree_of_cluster_parents(cluster) > depth - 1):
+            self.cdag.max_nonchild_degree_of_cluster(cluster) - 1 > depth
+        ) or (
+            self.cdag.max_degree_of_cluster_parents_in_local_graph(
+                cluster, local_graph
+            )
+            - 1
+            > depth
+        ):
             depth += 1
             depth_start = time.time()
             edge_removal = []
