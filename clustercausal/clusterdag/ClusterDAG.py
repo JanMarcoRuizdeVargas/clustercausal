@@ -530,9 +530,12 @@ class ClusterDAG:
                 n2 = self.true_dag.G.node_map[n2]
                 if n1 in self.true_dag.neighbors(n2):
                     edge_count += 1
-            intra_edge_ratio.append(
-                edge_count / (no_of_nodes * (no_of_nodes - 1) / 2)
-            )
+            if no_of_nodes == 1:
+                intra_edge_ratio.append(0.5)
+            else:
+                intra_edge_ratio.append(
+                    edge_count / (no_of_nodes * (no_of_nodes - 1) / 2)
+                )
         inter_edge_ratio = []
         for c1_name, c2_name in self.cluster_edges:
             edge_count = 0

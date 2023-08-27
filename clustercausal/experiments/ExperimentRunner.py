@@ -186,8 +186,7 @@ class ExperimentRunner:
             "base_shd": base_shd,
             **base_sid,
         }
-
-        #
+        edge_ratios = cluster_dag.get_cluster_connectedness()
 
         # save results
         folder_name = (
@@ -233,6 +232,7 @@ class ExperimentRunner:
             "n_nodes": simulation.n_nodes,
             "n_edges": simulation.n_edges,
             "n_clusters": simulation.n_clusters,
+            "edge_ratios": list(edge_ratios),
             "dag_method": simulation.dag_method,
             "distribution_type": simulation.distribution_type,
             "scm_method": simulation.scm_method,
