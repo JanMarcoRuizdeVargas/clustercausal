@@ -28,7 +28,7 @@ class ExperimentRunner:
     A class to run experiments in various configurations
     """
 
-    def __init__(self, config_path, algorithm="ClusterPC"):
+    def __init__(self, config_path):
         """
         Args:
             config_path (str): path to the experiment configuration file
@@ -50,6 +50,16 @@ class ExperimentRunner:
             self.config = yaml.safe_load(file)
         self.discovery_alg = self.config["discovery_alg"]
         self.config.pop("discovery_alg")
+        if self.config["sid"] == ["true"]:
+            self.sid = True
+            self.config.pop("sid")
+        elif self.config["sid"] == ["false"]:
+            self.sid = False
+            self.config.pop("sid")
+        else:
+            raise ValueError("sid must be either true or false")
+        self.indep_test = self.config["indep_test"][0]
+        self.config.pop("indep_test")
 
         if "linear" in self.config["scm_method"]:
             self.linear_config = self.config.copy()
@@ -111,20 +121,26 @@ class ExperimentRunner:
         simulation = Simulator(**param_dict)
         cluster_dag = simulation.run()
         # run causal discovery
+        # Set independence test
+        cluster_dag.true_dag.to_nx_graph()
+        nx_true_dag = cluster_dag.true_dag.nx_graph
         cluster_pc = ClusterPC(
             cdag=cluster_dag,
             data=cluster_dag.data,
             alpha=param_dict["alpha"],
-            indep_test="fisherz",
+            indep_test=self.indep_test,
             verbose=False,
             show_progress=False,
+            true_dag=nx_true_dag,
         )
         cluster_est_graph = cluster_pc.run()
         base_est_graph = pc(
             cluster_dag.data,
             alpha=param_dict["alpha"],
+            indep_test=self.indep_test,
             verbose=False,
             show_progress=False,
+            true_dag=nx_true_dag,
         )
         # evaluate causal discovery
         cluster_evaluation = Evaluator(
@@ -135,7 +151,7 @@ class ExperimentRunner:
             cluster_arrow_confusion,
             cluster_shd,
             cluster_sid,
-        ) = cluster_evaluation.get_causallearn_metrics()
+        ) = cluster_evaluation.get_causallearn_metrics(sid=self.sid)
         cluster_adjacency_confusion = {
             f"adj_{k}": v for k, v in cluster_adjacency_confusion.items()
         }
@@ -157,7 +173,7 @@ class ExperimentRunner:
             base_arrow_confusion,
             base_shd,
             base_sid,
-        ) = base_evaluation.get_causallearn_metrics()
+        ) = base_evaluation.get_causallearn_metrics(sid=self.sid)
         base_adjacency_confusion = {
             f"adj_{k}": v for k, v in base_adjacency_confusion.items()
         }
@@ -205,11 +221,13 @@ class ExperimentRunner:
         base_evaluation_results = {
             k: numpy_to_python(v) for k, v in base_evaluation_results.items()
         }
-
-        true_sid_bounds_eval = Evaluator(
-            truth=cluster_dag.true_dag.G, est=cluster_dag.true_dag.G
-        )
-        true_sid_bounds = true_sid_bounds_eval.get_sid_bounds()
+        if self.sid:
+            true_sid_bounds_eval = Evaluator(
+                truth=cluster_dag.true_dag.G, est=cluster_dag.true_dag.G
+            )
+            true_sid_bounds = true_sid_bounds_eval.get_sid_bounds()
+        else:
+            true_sid_bounds = {"sid_lower": None, "sid_upper": None}
 
         settings_results = {
             "n_nodes": simulation.n_nodes,
@@ -226,6 +244,7 @@ class ExperimentRunner:
             "alpha": simulation.alpha,
             "true_sid_lower": true_sid_bounds["sid_lower"],
             "true_sid_upper": true_sid_bounds["sid_upper"],
+            "indep_test": self.indep_test,
         }
         results = {
             "settings": settings_results,

@@ -41,7 +41,7 @@ def test_clust_pc_to_base_pc():
         arrow_confusion,
         shd,
         sid,
-    ) = evaluation.get_causallearn_metrics()
+    ) = evaluation.get_causallearn_metrics(sid=True)
 
     causallearn_cg = pc(
         cluster_dag.data, alpha=0.05, verbose=False, show_progress=False
@@ -54,7 +54,7 @@ def test_clust_pc_to_base_pc():
         cl_arrow_confusion,
         cl_shd,
         cl_si,
-    ) = evaluation_causallearn.get_causallearn_metrics()
+    ) = evaluation_causallearn.get_causallearn_metrics(sid=True)
     assert adjacency_confusion == cl_adjacency_confusion
     assert arrow_confusion == cl_arrow_confusion
     assert shd == cl_shd
@@ -83,7 +83,7 @@ def test_clust_pc_to_base_pc():
         arrow_confusion,
         shd,
         sid,
-    ) = evaluation.get_causallearn_metrics()
+    ) = evaluation.get_causallearn_metrics(sid=True)
 
     causallearn_cg = pc(
         cluster_dag.data, alpha=0.05, verbose=False, show_progress=False
@@ -96,7 +96,7 @@ def test_clust_pc_to_base_pc():
         cl_arrow_confusion,
         cl_shd,
         cl_sid,
-    ) = evaluation_causallearn.get_causallearn_metrics()
+    ) = evaluation_causallearn.get_causallearn_metrics(sid=True)
     assert adjacency_confusion == cl_adjacency_confusion
     assert arrow_confusion == cl_arrow_confusion
     assert shd == cl_shd
@@ -125,7 +125,7 @@ def test_clust_pc_to_base_pc():
         arrow_confusion,
         shd,
         sid,
-    ) = evaluation.get_causallearn_metrics()
+    ) = evaluation.get_causallearn_metrics(sid=True)
 
     causallearn_cg = pc(
         cluster_dag.data, alpha=0.05, verbose=False, show_progress=False
@@ -138,7 +138,7 @@ def test_clust_pc_to_base_pc():
         cl_arrow_confusion,
         cl_shd,
         cl_sid,
-    ) = evaluation_causallearn.get_causallearn_metrics()
+    ) = evaluation_causallearn.get_causallearn_metrics(sid=True)
     assert adjacency_confusion == cl_adjacency_confusion
     assert arrow_confusion == cl_arrow_confusion
     assert shd == cl_shd

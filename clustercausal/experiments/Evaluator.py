@@ -61,7 +61,7 @@ class Evaluator:
             self.truth.get_nodes() == self.est.get_nodes()
         )  # Node lists must be same
 
-    def get_causallearn_metrics(self):
+    def get_causallearn_metrics(self, sid):
         """
         Name outdated, with cdt sid metric
         Calculate all causallearn metrics
@@ -78,7 +78,10 @@ class Evaluator:
         adjacency_confusion = self.get_adjacency_confusion()
         arrow_confusion = self.get_arrow_confusion()
         shd = self.get_shd()
-        sid = self.get_sid_bounds()
+        if sid:
+            sid = self.get_sid_bounds()
+        else:
+            sid = {"sid_lower": None, "sid_lower": None}
 
         return adjacency_confusion, arrow_confusion, shd, sid
 

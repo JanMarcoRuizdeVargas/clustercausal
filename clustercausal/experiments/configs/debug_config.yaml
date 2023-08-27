@@ -9,7 +9,7 @@ discovery_alg : ['ClusterPC']
 n_nodes: [10]
 
 # will not be exactly graph edges due to gcastle dag generator, might be less edges
-n_edges: [21]
+n_edges: [20]
 
 dag_method: ['erdos_renyi']
 
@@ -34,3 +34,7 @@ noise_scale: [1]
 
 alpha: [0.01]
 
+sid: ['false']
+
+indep_test: ['d_separation']
+#['fisherz', 'kci', 

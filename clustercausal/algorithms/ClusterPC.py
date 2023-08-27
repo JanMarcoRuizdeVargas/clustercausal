@@ -69,7 +69,6 @@ class ClusterPC:
         self.cdag.cdag_to_mpdag()  # Updates self.cdag.cg to mpdag
         self.cdag.get_cluster_topological_ordering()  # saved in self.cdag.cdag_list_of_topological_sort
 
-        # Set independence test
         self.cdag.cg.test = CIT(self.data, indep_test, **kwargs)
 
     def run(self) -> CausalGraph:
