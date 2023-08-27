@@ -1,5 +1,6 @@
 import numpy as np
 import causallearn
+from itertools import combinations
 
 from causallearn.graph.GraphClass import CausalGraph
 from causallearn.graph.GeneralGraph import GeneralGraph
@@ -222,6 +223,36 @@ def test_max_degree_of_cluster_and_max_nonchild_degree_of_cluster_and_max_degree
     assert cdag.max_degree_of_cluster_parents(Y_cluster) == 0
     assert cdag.max_degree_of_cluster_parents(Z_cluster) == 5
     assert cdag.max_degree_of_cluster_parents(S_cluster) == 9
+
+
+def test_get_cluster_connectedness():
+    debug_cluster_mapping = {
+        "X": ["0", "1", "2"],
+        "Y": ["3", "4"],
+        "Z": ["5", "6", "7"],
+        "S": ["8", "9"],
+    }
+    debug_cluster_edges = [("X", "Z"), ("Y", "Z"), ("Z", "S")]
+    cdag = ClusterDAG(debug_cluster_mapping, debug_cluster_edges)
+    cdag.cdag_to_mpdag()
+    cdag.true_dag = cdag.cg
+    assert cdag.get_cluster_connectedness() == (1.0, 1.0, 0.5)
+    cdag.get_cluster_connectedness() == (1.0, 1.0, 0.5)
+    n0 = cdag.get_node_by_name("0", cg=cdag.true_dag)
+    n1 = cdag.get_node_by_name("1", cg=cdag.true_dag)
+    n3 = cdag.get_node_by_name("3", cg=cdag.true_dag)
+    n4 = cdag.get_node_by_name("4", cg=cdag.true_dag)
+    n6 = cdag.get_node_by_name("6", cg=cdag.true_dag)
+    n9 = cdag.get_node_by_name("9", cg=cdag.true_dag)
+    for nx, ny in combinations([n0, n1, n3, n4, n6, n9], 2):
+        edge = cdag.true_dag.G.get_edge(nx, ny)
+        if edge is not None:
+            cdag.true_dag.G.remove_edge(edge)
+    cdag.get_cluster_connectedness() == (
+        0.6666666666666666,
+        0.7592592592592592,
+        0.3796296296296296,
+    )
 
 
 def test_get_node_indices_of_cluster():

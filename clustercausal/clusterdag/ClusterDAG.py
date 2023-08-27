@@ -512,3 +512,64 @@ class ClusterDAG:
             -forbidden ancestors
         """
         pass
+
+    def get_cluster_connectedness(self):
+        """
+        Returns the cluster connectedness of the CDAG
+        """
+        if self.true_dag is None:
+            raise ValueError("True DAG not set")
+        intra_edge_ratio = []
+        for c_name in self.cluster_mapping.keys():
+            edge_count = 0
+            no_of_nodes = len(self.cluster_mapping[c_name])
+            for n1, n2 in combinations(self.cluster_mapping[c_name], 2):
+                n1 = self.get_node_by_name(n1, self.true_dag)
+                n2 = self.get_node_by_name(n2, self.true_dag)
+                n1 = self.true_dag.G.node_map[n1]
+                n2 = self.true_dag.G.node_map[n2]
+                if n1 in self.true_dag.neighbors(n2):
+                    edge_count += 1
+            intra_edge_ratio.append(
+                edge_count / (no_of_nodes * (no_of_nodes - 1) / 2)
+            )
+        inter_edge_ratio = []
+        for c1_name, c2_name in self.cluster_edges:
+            edge_count = 0
+            c1_no_of_nodes = len(self.cluster_mapping[c1_name])
+            c2_no_of_nodes = len(self.cluster_mapping[c2_name])
+            for n1 in self.cluster_mapping[c1_name]:
+                n1_name = self.get_node_by_name(n1, self.true_dag)
+                n1 = self.true_dag.G.node_map[n1_name]
+                for n2 in self.cluster_mapping[c2_name]:
+                    n2_name = self.get_node_by_name(n2, self.true_dag)
+                    n2 = self.true_dag.G.node_map[n2_name]
+                    if n1 in self.true_dag.neighbors(n2):
+                        edge_count += 1
+            inter_edge_ratio.append(
+                edge_count / (c1_no_of_nodes * c2_no_of_nodes)
+            )
+        inter_edge_ratio_with_disconnected_clust = []
+        for c1_name, c2_name in combinations(self.cluster_mapping.keys(), 2):
+            if (c1_name, c2_name) not in self.cluster_edges:
+                inter_edge_ratio_with_disconnected_clust.append(0)
+            else:
+                edge_count = 0
+                c1_no_of_nodes = len(self.cluster_mapping[c1_name])
+                c2_no_of_nodes = len(self.cluster_mapping[c2_name])
+                for n1 in self.cluster_mapping[c1_name]:
+                    n1_name = self.get_node_by_name(n1, self.true_dag)
+                    n1 = self.true_dag.G.node_map[n1_name]
+                    for n2 in self.cluster_mapping[c2_name]:
+                        n2_name = self.get_node_by_name(n2, self.true_dag)
+                        n2 = self.true_dag.G.node_map[n2_name]
+                        if n1 in self.true_dag.neighbors(n2):
+                            edge_count += 1
+                inter_edge_ratio_with_disconnected_clust.append(
+                    edge_count / (c1_no_of_nodes * c2_no_of_nodes)
+                )
+        return (
+            np.mean(intra_edge_ratio),
+            np.mean(inter_edge_ratio),
+            np.mean(inter_edge_ratio_with_disconnected_clust),
+        )
