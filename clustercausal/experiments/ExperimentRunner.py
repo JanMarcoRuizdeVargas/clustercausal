@@ -187,6 +187,9 @@ class ExperimentRunner:
             **base_sid,
         }
         edge_ratios = cluster_dag.get_cluster_connectedness()
+        edge_ratios = [
+            float(np.round(i, 2)) for i in edge_ratios
+        ]  # for yaml readability
 
         # save results
         folder_name = (
@@ -232,7 +235,7 @@ class ExperimentRunner:
             "n_nodes": simulation.n_nodes,
             "n_edges": simulation.n_edges,
             "n_clusters": simulation.n_clusters,
-            "edge_ratios": list(edge_ratios),
+            "edge_ratios": edge_ratios,
             "dag_method": simulation.dag_method,
             "distribution_type": simulation.distribution_type,
             "scm_method": simulation.scm_method,
