@@ -36,5 +36,5 @@ alpha: [0.01]
 
 sid: ['false']
 
-indep_test: ['d_separation']
+indep_test: ['fisherz']
 #['fisherz', 'kci', 

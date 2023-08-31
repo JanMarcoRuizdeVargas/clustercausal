@@ -6,10 +6,10 @@
 discovery_alg : ['ClusterPC']
 
 # any integer between 2 and 50
-n_nodes: [20]
+n_nodes: [50]
 
 # will not be exactly graph edges due to gcastle dag generator, might be less edges
-n_edges: [30, 50]
+n_edges: [50]
 
 dag_method: ['erdos_renyi', 'scale_free', 'hierarchical']
 #, , 'scale_free' 'hierarchical']
@@ -21,9 +21,9 @@ weight_range:
 
 lin_distribution_type: ['gauss', 'exp', 'gumbel']
 
-nonlin_distribution_type: ['mlp', 'gp']
+nonlin_distribution_type: []
 #'mim', 
-scm_method: ['linear', 'nonlinear']
+scm_method: ['linear', 'nonlinear'] 
 
 sample_size: [1000]
 
@@ -33,7 +33,8 @@ node_names: [null]
 
 noise_scale: [1]
 
-alpha: [0.01, 0.05, 0.5, 0.95, 0.99]
+alpha: [0.25]
 # SID is very expensive to compute on large graphs
 sid: ['false']
 
+indep_test: ['fisherz']

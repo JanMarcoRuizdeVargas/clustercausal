@@ -107,6 +107,8 @@ def load_data(directory):
             "scm_method",
             "seed",
             "weight_range",
+            "edge_ratios",
+            "indep_test",
         ]:
             data[col] = data[col].astype(float)
     return data
