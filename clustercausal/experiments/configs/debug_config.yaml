@@ -32,7 +32,7 @@ node_names: [null]
 
 noise_scale: [1]
 
-alpha: [0.01]
+alpha: [0.1]
 
 sid: ['false']
 

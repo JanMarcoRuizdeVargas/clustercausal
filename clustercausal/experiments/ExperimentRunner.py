@@ -164,6 +164,9 @@ class ExperimentRunner:
             "cluster_shd": cluster_shd,
             **cluster_sid,
         }
+        pruned_baseline_cg = Evaluator.get_cluster_pruned_benchmark(
+            cdag=cluster_dag, cg=base_est_graph
+        )
 
         base_evaluation = Evaluator(
             truth=cluster_dag.true_dag.G, est=base_est_graph.G
@@ -186,6 +189,28 @@ class ExperimentRunner:
             "base_shd": base_shd,
             **base_sid,
         }
+        pruned_base_evaluation = Evaluator(
+            truth=cluster_dag.true_dag.G, est=pruned_baseline_cg.G
+        )
+        (
+            pruned_base_adjacency_confusion,
+            pruned_base_arrow_confusion,
+            pruned_base_shd,
+            pruned_base_sid,
+        ) = pruned_base_evaluation.get_causallearn_metrics(sid=self.sid)
+        pruned_base_adjacency_confusion = {
+            f"adj_{k}": v for k, v in pruned_base_adjacency_confusion.items()
+        }
+        pruned_base_arrow_confusion = {
+            f"arrow_{k}": v for k, v in pruned_base_arrow_confusion.items()
+        }
+        pruned_base_evaluation_results = {
+            **pruned_base_adjacency_confusion,
+            **pruned_base_arrow_confusion,
+            "pruned_base_shd": pruned_base_shd,
+            **pruned_base_sid,
+        }
+
         edge_ratios = cluster_dag.get_cluster_connectedness()
         edge_ratios = [
             float(np.round(i, 2)) for i in edge_ratios
@@ -223,6 +248,11 @@ class ExperimentRunner:
         base_evaluation_results = {
             k: numpy_to_python(v) for k, v in base_evaluation_results.items()
         }
+        pruned_base_evaluation_results = {
+            k: numpy_to_python(v)
+            for k, v in pruned_base_evaluation_results.items()
+        }
+
         if self.sid:
             true_sid_bounds_eval = Evaluator(
                 truth=cluster_dag.true_dag.G, est=cluster_dag.true_dag.G
@@ -253,6 +283,7 @@ class ExperimentRunner:
             "settings": settings_results,
             "cluster_evaluation_results": cluster_evaluation_results,
             "base_evaluation_results": base_evaluation_results,
+            "pruned_base_evaluation_results": pruned_base_evaluation_results,
         }
 
         file_name = "results.yaml"
