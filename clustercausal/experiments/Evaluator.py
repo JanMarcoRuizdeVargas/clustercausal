@@ -11,6 +11,8 @@ from causallearn.graph.ArrowConfusion import ArrowConfusion
 from causallearn.graph.SHD import SHD
 from causallearn.graph.Graph import Graph
 from causallearn.graph.Endpoint import Endpoint
+from causallearn.graph.GraphClass import CausalGraph
+from causallearn.graph.Edge import Edge
 
 from cdt.metrics import SID, SID_CPDAG, get_CPDAG
 
@@ -179,3 +181,27 @@ class Evaluator:
         sid["sid_upper"] = int(sid_upper)
         self.sid = sid
         return self.sid
+
+    @staticmethod
+    def get_cluster_pruned_benchmark(cdag: ClusterDAG, cg: CausalGraph):
+        """
+        Prunes the cg (thought to be of the baseline PC)
+        with the missing edges of the cluster causal graph
+        """
+        num_vars = len(cg.G.get_nodes())
+        for i in range(num_vars):
+            for j in range(num_vars):
+                if cg.G.graph[i, j] != 0 and cg.G.graph[j, i] != 0:
+                    n_i = ClusterDAG.get_key_by_value(cg.G.node_map, i)
+                    n_j = ClusterDAG.get_key_by_value(cg.G.node_map, j)
+                    name_i = n_i.get_name()
+                    name_j = n_j.get_name()
+                    c_i = ClusterDAG.find_key(cdag.cluster_mapping, name_i)
+                    c_j = ClusterDAG.find_key(cdag.cluster_mapping, name_j)
+                    if c_i != c_j and (
+                        (c_i, c_j) not in cdag.cluster_edges
+                        and (c_j, c_i) not in cdag.cluster_edges
+                    ):
+                        edge = cg.G.get_edge(n_i, n_j)
+                        cg.G.remove_edge(edge)
+        return cg
