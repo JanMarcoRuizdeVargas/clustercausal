@@ -86,10 +86,12 @@ def load_data(directory):
         result_dict = load_experiment(experiment_path)
         if columns is None:
             columns = []
-            for key in result_dict["base_evaluation_results"].keys():
-                columns.append("base_" + key)
             for key in result_dict["cluster_evaluation_results"].keys():
                 columns.append("cluster_" + key)
+            for key in result_dict["base_evaluation_results"].keys():
+                columns.append("base_" + key)
+            for key in result_dict["pruned_base_evaluation_results"].keys():
+                columns.append("pruned_base_" + key)
             for key in result_dict["settings"].keys():
                 columns.append(key)
             data = pd.DataFrame(columns=columns)

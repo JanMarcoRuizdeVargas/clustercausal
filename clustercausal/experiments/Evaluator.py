@@ -187,6 +187,8 @@ class Evaluator:
         """
         Prunes the cg (thought to be of the baseline PC)
         with the missing edges of the cluster causal graph
+        Used as an improved benchmark to see if a priori cluster knowledge
+        makes a difference versus posteriori cluster knowledge
         """
         num_vars = len(cg.G.get_nodes())
         for i in range(num_vars):

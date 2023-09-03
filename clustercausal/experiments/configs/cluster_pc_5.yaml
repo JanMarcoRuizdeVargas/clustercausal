@@ -33,7 +33,7 @@ node_names: [null]
 
 noise_scale: [1]
 
-alpha: [0.05]
+alpha: [0.5]
 # SID is very expensive to compute on large graphs
 sid: ['true']
 
