@@ -4,7 +4,7 @@ import networkx as nx
 
 from causallearn.search.ConstraintBased.PC import pc
 from clustercausal.clusterdag.ClusterDAG import ClusterDAG
-from clustercausal.algorithms.ClusterPC import ClusterPC
+from clustercausal.algorithms.OldClusterPC import ClusterPC
 from clustercausal.experiments.Simulator import Simulator
 from clustercausal.experiments.Evaluator import Evaluator
 

@@ -35,6 +35,6 @@ noise_scale: [1]
 
 alpha: [0.05]
 # SID is very expensive to compute on large graphs
-sid: ['true']
+sid: ['false']
 
 indep_test: ['fisherz']
