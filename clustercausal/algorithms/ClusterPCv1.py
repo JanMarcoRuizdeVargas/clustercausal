@@ -223,6 +223,7 @@ class ClusterPC:
 
         return self.cdag.cg  # Return CausalGraph of the CDAG
 
+    # @profile
     def into_cluster_phase(self, low_cluster):
         """
         Runs the into-cluster phase of the ClustPC algorithm for a given cluster.

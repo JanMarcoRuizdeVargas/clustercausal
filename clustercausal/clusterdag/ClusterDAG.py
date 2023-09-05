@@ -235,8 +235,8 @@ class ClusterDAG:
                 cluster_parents_max_degree = deg
         return cluster_parents_max_degree
 
-    def max_degree_of_cluster_parents_in_local_graph(
-        self, cluster: Node, local_graph
+    def max_degree_of_cluster_parents_in_considered_node_indices(
+        self, cluster: Node, local_graph, considered_node_indices
     ) -> int:
         # First element is cluster itself, remove it
         # cluster_parents is Node instance
@@ -249,7 +249,14 @@ class ClusterDAG:
                     node.get_name()
                     in self.cluster_mapping[clust_parent.get_name()]
                 ):
-                    deg = local_graph.G.get_degree(node)
+                    neighbor_indices = self.cg.neighbors(
+                        self.cg.G.node_map[node]
+                    )
+                    considered_neighbors = np.intersect1d(
+                        neighbor_indices, considered_node_indices
+                    )
+                    deg = len(considered_neighbors)
+                    # deg = local_graph.G.get_degree(node)
                     if deg > max_degree:
                         max_degree = deg
         return max_degree

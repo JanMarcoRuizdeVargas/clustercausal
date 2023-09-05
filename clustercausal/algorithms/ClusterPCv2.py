@@ -5,6 +5,7 @@ from numpy import ndarray
 import pandas as pd
 import networkx as nx
 import causallearn
+import line_profiler
 
 # import castle
 import logging
@@ -183,6 +184,26 @@ class ClusterPC:
                 )
             else:
                 pbar = tqdm(total=cluster_node_indices.shape[0])
+
+        # Get list of node indices of clusters in topological order
+        # up to and including current cluster, but none further down
+        # Used for determining possible separating sets in neighbors of
+        # nodes y, which are parent nodes of x and possibly one cluster up
+        cluster_topological_index = (
+            self.cdag.cdag_list_of_topological_sort.index(cluster.get_name())
+        )
+        considered_node_indices = []
+        for c_i in range(cluster_topological_index + 1):
+            c_name = self.cdag.cdag_list_of_topological_sort[c_i]
+            clust = ClusterDAG.get_node_by_name(
+                c_name, self.cdag.cluster_graph
+            )
+            clust_node_indices = self.cdag.get_node_indices_of_cluster(clust)
+            # Get union
+            considered_node_indices = np.union1d(
+                considered_node_indices, clust_node_indices
+            )
+
         # Depth loop
         # Depends on max nonchilds within cluster and max degree of parents
         # of cluster, as sets in neighbors of top cluster nodes are considered
@@ -190,13 +211,15 @@ class ClusterPC:
         while (
             self.cdag.max_nonchild_degree_of_cluster(cluster) - 1 > depth
         ) or (
-            self.cdag.max_degree_of_cluster_parents_in_local_graph(
-                cluster, local_graph
+            self.cdag.max_degree_of_cluster_parents_in_considered_node_indices(
+                cluster, local_graph, considered_node_indices
             )
             - 1
             > depth
         ):
             depth += 1
+            if self.verbose:
+                print(f"Depth is {depth}")
             depth_start = time.time()
             edge_removal = []
             if self.show_progress:
@@ -282,6 +305,8 @@ class ClusterPC:
                     if y_node in self.cdag.cg.G.get_parents(x_node):
                         # Consider separating sets in neighbors(y)
                         Neigh_y = self.cdag.cg.neighbors(y)
+                        # Don't, as in neighbors of y could be outside local graph
+                        # but that increases complexity
                         # Remove neighbors that are not in local_graph or are in cluster
                         local_mask = np.isin(Neigh_y, local_graph_node_indices)
                         Neigh_y_in_local_graph = Neigh_y[local_mask]
