@@ -14,6 +14,7 @@ from causallearn.utils.PCUtils.BackgroundKnowledge import BackgroundKnowledge
 from causallearn.graph.GraphNode import GraphNode
 from causallearn.graph.Node import Node
 from causallearn.graph.GeneralGraph import GeneralGraph
+from causallearn.graph.Endpoint import Endpoint
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
@@ -80,7 +81,13 @@ class ClusterDAG:
             cluster1_name = cluster1.get_name()
             cluster2_name = cluster2.get_name()
             if cluster1 != cluster2:
-                if (cluster1_name, cluster2_name) not in self.cluster_edges:
+                if (
+                    cluster1_name,
+                    cluster2_name,
+                ) not in self.cluster_edges and (
+                    cluster2_name,
+                    cluster1_name,
+                ) not in self.cluster_edges:
                     self.cluster_graph.G.remove_edge(edge)
                     # logging.info(
                     #     "removed edge:"
@@ -92,6 +99,25 @@ class ClusterDAG:
                     # logging.info(
                     #     "oriented edge:"
                     #     f" ({cluster1.get_name()},{cluster2.get_name()})"
+                    # )
+                if (cluster2_name, cluster1_name) in self.cluster_edges:
+                    self.cluster_graph.G.remove_edge(edge)
+                    self.cluster_graph.G.add_directed_edge(cluster2, cluster1)
+                    # logging.info(
+                    #     "oriented edge:"
+                    #     f" ({cluster2.get_name()},{cluster1.get_name()})"
+                    # )
+                if (cluster2_name, cluster1_name) in self.cluster_edges and (
+                    cluster1_name,
+                    cluster2_name,
+                ) in self.cluster_edges:
+                    self.cluster_graph.G.remove_edge(edge)
+                    edge.endpoint1 = Endpoint.TAIL
+                    edge.endpoint2 = Endpoint.TAIL
+                    self.cluster_graph.G.add_edge(edge)
+                    # logging.info(
+                    #     "unoriented edge:"
+                    #     f" ({cluster2.get_name()},{cluster1.get_name()})"
                     # )
 
     def cdag_to_pag(self, forbidden_latent_edges: list):

@@ -42,7 +42,7 @@ class Simulator:
         n_edges=13,
         dag_method="erdos_renyi",
         n_clusters=None,
-        n_c_edges=None,
+        # n_c_edges=None,
         weight_range=[-1, 2],
         distribution_type="gauss",
         scm_method="linear",
@@ -61,7 +61,7 @@ class Simulator:
         print("Warning: n_edges is not exact due to gcastle implementation")
         self.dag_method = dag_method
         self.n_clusters = n_clusters
-        self.n_c_edges = n_c_edges
+        # self.n_c_edges = n_c_edges
         self.weight_range = tuple(weight_range)
         self.distribution_type = distribution_type
         self.scm_method = scm_method
@@ -107,7 +107,6 @@ class Simulator:
             if dag is None:
                 cluster_dag = self.generate_dag_via_clusters(
                     self.n_clusters,
-                    self.n_c_edges,
                     self.n_nodes,
                     self.n_edges,
                     self.dag_method,
@@ -205,7 +204,6 @@ class Simulator:
     @staticmethod
     def generate_dag_via_clusters(
         n_clusters,
-        n_c_edges,
         n_nodes,
         n_edges,
         dag_method,
@@ -218,9 +216,9 @@ class Simulator:
         drops out edges from the mpdag to generate a DAG
         Arguments:
             n_clusters: number of clusters in the C-DAG
-            n_c_edges: not exact, if None then roughly 1.2 * n_nodes
+            n_cluster_edges: roughly 1.2 * n_nodes
             n_nodes: number of nodes in the DAG
-            n_edges: influences number of edges in the DAG
+            # n_edges: approx. number of edges in the DAG
             dag_method: method to generate the C-DAG
                     methods supported: erdos_renyi, scale_free, hierarchical
             seed: seed for the random number generator
@@ -230,33 +228,32 @@ class Simulator:
             cluster_dag: a CausalGraph object
             cluster_dag.true_dag; the true DAG
         """
-        if n_c_edges is None:
-            n_c_edges = np.round(n_nodes * 1.2)
+        n_cluster_edges = np.round(n_nodes * 1.2)
         if dag_method == "erdos_renyi":
             W_clust = DAG.erdos_renyi(
                 n_clusters,
-                n_c_edges,
+                n_cluster_edges,
                 weight_range=weight_range,
                 seed=seed,
             )
         elif dag_method == "scale_free":
             W_clust = DAG.scale_free(
                 n_clusters,
-                n_c_edges,
+                n_cluster_edges,
                 weight_range=weight_range,
                 seed=seed,
             )
         elif dag_method == "bipartite":
             W = DAG.bipartite(
                 n_clusters,
-                n_c_edges,
+                n_cluster_edges,
                 weight_range=weight_range,
                 seed=seed,
             )
         elif dag_method == "hierarchical":
             W = DAG.hierarchical(
                 n_clusters,
-                n_c_edges,
+                n_cluster_edges,
                 weight_range=weight_range,
                 seed=seed,
             )
@@ -516,3 +513,76 @@ class Simulator:
         )
         cluster_dag.true_dag = dag
         return cluster_dag
+
+        # # OLD CODE
+        """
+        # if n_clusters is None:
+        #     n_clusters = np.random.randint(
+        #         low=3, high=int(np.ceil(n_nodes / 2 + 1)) + 1
+        #     )
+        # if n_c_edges is None:
+        #     n_c_edges = np.random.randint(
+        #         low=n_clusters - 1,
+        #         high=int(np.ceil(n_clusters * (n_clusters - 1) / 2)) + 1,
+        #     )
+        # weight_range = (1, 1)
+        # cluster_names = [f"C{i+1}" for i in range(n_clusters)]
+        # cluster_graph = Simulator.generate_dag(
+        #     n_clusters,
+        #     n_c_edges,
+        #     dag_method,
+        #     weight_range,
+        #     seed,
+        #     node_names=cluster_names,
+        # )
+        # cluster_graph.node_names = cluster_names
+
+        # # Give each cluster a probability of being chosen
+        # cluster_probabilities = np.random.dirichlet(
+        #     np.ones(n_clusters), size=1
+        # )[0]
+
+        # # Make cluster mapping, ensure that each cluster has at least one node
+        # cluster_mapping = {}
+        # dag.node_names = ClusterDAG.get_node_names_from_list(dag.G.nodes)
+        # nodes_left_to_assign = dag.node_names.copy()
+        # for cluster_name in cluster_graph.node_names:
+        #     first_node = np.random.choice(nodes_left_to_assign)
+        #     nodes_left_to_assign.remove(first_node)
+        #     cluster_mapping[cluster_name] = [first_node]
+        # for node_name in nodes_left_to_assign:
+        #     chosen_cluster = np.random.choice(
+        #         cluster_graph.node_names, p=cluster_probabilities
+        #     )
+        #     cluster_mapping[chosen_cluster] += [node_name]
+
+        # # Adjust true_dag such that cluster_graph is admissible
+        # for cluster1, cluster2 in itertools.combinations(
+        #     cluster_graph.node_names, 2
+        # ):
+        #     for node1 in cluster_mapping[cluster1]:
+        #         for node2 in cluster_mapping[cluster2]:
+        #             c1 = ClusterDAG.get_node_by_name(cluster1, cluster_graph)
+        #             c2 = ClusterDAG.get_node_by_name(cluster2, cluster_graph)
+        #             n1 = ClusterDAG.get_node_by_name(node1, dag)
+        #             n2 = ClusterDAG.get_node_by_name(node2, dag)
+        #             c1_indice = cluster_graph.G.node_map[c1]
+        #             c2_indice = cluster_graph.G.node_map[c2]
+        #             n1_indice = dag.G.node_map[n1]
+        #             n2_indice = dag.G.node_map[n2]
+        #             # Reorient edge n1 -> n2 to n1 <- n2 if c1 <- c2
+        #             if (
+        #                 cluster_graph.G.graph[c1_indice, c2_indice] == 1
+        #                 and cluster_graph.G.graph[c2_indice, c1_indice] == -1
+        #                 and dag.G.graph[n1_indice, n2_indice] == -1
+        #                 and dag.G.graph[n2_indice, n1_indice] == 1
+        #             ):
+        #                 dag.G.graph[n1_indice, n2_indice] = 1
+        #                 dag.G.graph[n2_indice, n1_indice] = -1
+        """
+
+        # return dag, cluster_graph, cluster_mapping
+
+
+# simulation = Simulator(n_nodes=5, n_edges=7, seed=1234)
+# cluster_dag = simulation.run()

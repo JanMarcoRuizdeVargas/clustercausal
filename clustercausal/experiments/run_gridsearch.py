@@ -14,17 +14,17 @@ from clustercausal.utils.Utils import *
 
 if __name__ == "__main__":
     # config_path = "clustercausal\experiments\configs\debug_config.yaml"
-    print("STARTING 1st EXPERIMENT")
-    config_path = "clustercausal\experiments\configs\cluster_pc_1.yaml"
-    config_path = config_path.replace("\\", "/")
-    experiment = ExperimentRunner(config_path)
-    experiment.run_gridsearch_experiment()
+    # print("STARTING 1st EXPERIMENT")
+    # config_path = "clustercausal\experiments\configs\cluster_pc_1.yaml"
+    # config_path = config_path.replace("\\", "/")
+    # experiment = ExperimentRunner(config_path)
+    # experiment.run_gridsearch_experiment()
 
-    print("STARTING 2nd EXPERIMENT")
-    config_path = "clustercausal\experiments\configs\cluster_pc_2.yaml"
-    config_path = config_path.replace("\\", "/")
-    experiment = ExperimentRunner(config_path)
-    experiment.run_gridsearch_experiment()
+    # print("STARTING 2nd EXPERIMENT")
+    # config_path = "clustercausal\experiments\configs\cluster_pc_2.yaml"
+    # config_path = config_path.replace("\\", "/")
+    # experiment = ExperimentRunner(config_path)
+    # experiment.run_gridsearch_experiment()
 
     print("STARTING 3rd EXPERIMENT")
     config_path = "clustercausal\experiments\configs\cluster_pc_3.yaml"
