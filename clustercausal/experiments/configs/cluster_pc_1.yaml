@@ -9,12 +9,12 @@ discovery_alg : ['ClusterPC']
 n_nodes: [10]
 
 # will not be exactly graph edges due to gcastle dag generator, might be less edges
-n_edges: [10, 30, 50]
+n_edges: [10, 20, 30, 50]
 
 dag_method: ['erdos_renyi', 'scale_free', 'hierarchical']
 
-n_clusters: [4]
-# approximate number of edges in C-DAG
+n_clusters: [2, 3, 4, 5]
+# approximate number of edges in C-DAG if cluster_method is 'cdag'
 n_c_edges: [4]
 
 weight_range: 
@@ -37,9 +37,9 @@ noise_scale: [1]
 
 alpha: [0.01, 0.05, 0.1, 0.25, 0.5]
 # SID is very expensive to compute on large graphs
-sid: ['false']
+sid: ['true']
 
 indep_test: ['fisherz']
 
 # Whether C-DAG or DAG is generated first, options: ['cdag', 'dag']
-generation_method: ['dag']
+cluster_method: ['dag']

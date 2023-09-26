@@ -9,6 +9,7 @@ import pickle
 import networkx as nx
 
 from causallearn.search.ConstraintBased.PC import pc
+from causallearn.graph.GeneralGraph import GeneralGraph
 
 # from cdt.metrics import SID, SID_CPDAG, get_CPDAG
 
@@ -223,7 +224,7 @@ class ExperimentRunner:
             + f"_{param_dict['n_edges']}_edges"
             + f"_{param_dict['n_clusters']}_clusters"
             + f"_{param_dict['distribution_type']}"
-            + str(time.strftime("%H-%M-%S"))
+            + str(datetime.datetime.now().strftime("%H-%M-%S-%f")[:-3])
         )
         file_path = os.path.join(
             "clustercausal",
@@ -261,6 +262,12 @@ class ExperimentRunner:
         else:
             true_sid_bounds = {"sid_lower": None, "sid_upper": None}
 
+        empty_G = GeneralGraph(
+            nodes=cluster_dag.true_dag.G.nodes
+        )  # is empty by default
+        empty_shd_eval = Evaluator(truth=cluster_dag.true_dag.G, est=empty_G)
+        empty_graph_shd = empty_shd_eval.get_shd()
+
         settings_results = {
             "n_nodes": simulation.n_nodes,
             "n_edges": simulation.n_edges,
@@ -278,6 +285,7 @@ class ExperimentRunner:
             "true_sid_lower": true_sid_bounds["sid_lower"],
             "true_sid_upper": true_sid_bounds["sid_upper"],
             "indep_test": self.indep_test,
+            "empty_graph_shd": empty_graph_shd,
         }
         results = {
             "settings": settings_results,

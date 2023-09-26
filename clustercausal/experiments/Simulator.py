@@ -41,6 +41,7 @@ class Simulator:
         n_nodes=7,
         n_edges=13,
         dag_method="erdos_renyi",
+        cluster_method="dag",
         n_clusters=None,
         n_c_edges=None,
         weight_range=[-1, 2],
@@ -60,6 +61,7 @@ class Simulator:
         self.n_edges = n_edges
         print("Warning: n_edges is not exact due to gcastle implementation")
         self.dag_method = dag_method
+        self.cluster_method = cluster_method
         self.n_clusters = n_clusters
         self.n_c_edges = n_c_edges
         self.weight_range = tuple(weight_range)
@@ -71,10 +73,10 @@ class Simulator:
         self.noise_scale = noise_scale
         self.alpha = alpha
 
-    def run(self, cluster_method="dag") -> ClusterDAG:
+    def run(self) -> ClusterDAG:
         """
         Run the simulator and generate a cluster_dag
-        Arguments:
+        'Arguments':
             cluster_method: 'standard' or 'cluster'
                 Decides if C-DAG or DAG is generated first
                 'dag': generated DAG and uses topological ordering to cluster
@@ -90,7 +92,7 @@ class Simulator:
             self.n_clusters = np.random.randint(
                 low=2, high=int(np.ceil(self.n_nodes / 2)) + 1
             )
-        if cluster_method == "dag":
+        if self.cluster_method == "dag":
             if dag is None:
                 dag = self.generate_dag(
                     self.n_nodes,
@@ -103,7 +105,7 @@ class Simulator:
             cluster_dag = self.generate_clustering(
                 dag, self.n_clusters, self.seed
             )
-        elif cluster_method == "cdag":
+        elif self.cluster_method == "cdag":
             if dag is None:
                 cluster_dag = self.generate_dag_via_clusters(
                     self.n_clusters,
