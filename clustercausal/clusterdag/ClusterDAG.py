@@ -289,7 +289,7 @@ class ClusterDAG:
 
     def get_local_graph(self, cluster: Node) -> CausalGraph:
         """
-        Define the local graph on which to run the intra cluster phase, restrict data
+        Define the local graph on which to run the intra cluster phase, restrict
         to cluster union parents of cluster
         Parameters:
         cluster (Node object in the CausalGraph instance cdag.cluster_graph

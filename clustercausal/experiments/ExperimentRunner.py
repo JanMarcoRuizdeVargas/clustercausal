@@ -15,7 +15,7 @@ from causallearn.graph.GeneralGraph import GeneralGraph
 
 from clustercausal.experiments.Simulator import Simulator
 from clustercausal.experiments.Evaluator import Evaluator
-from clustercausal.algorithms.ClusterPCv1 import ClusterPC
+from clustercausal.algorithms.ClusterPC import ClusterPC
 from clustercausal.utils.Utils import *
 
 # os.environ[
