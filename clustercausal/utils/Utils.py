@@ -5,9 +5,47 @@ import yaml
 import pandas as pd
 import pickle
 
-import causallearn
+from causallearn.graph.GraphClass import CausalGraph
+from scipy import linalg
 
 from clustercausal.clusterdag.ClusterDAG import ClusterDAG
+
+
+def make_graph(node_names, parent_dict):
+    """
+    Arguments:
+    nodes: list of string node names
+    parent_dict: dict of 'node_name': 'list_parent_node_names'
+    Returns:
+    cg: CausalGraph
+    W: adjacency matrix
+    """
+    cg = CausalGraph(no_of_var=len(node_names), node_names=node_names)
+    cg.G.graph = np.zeros((len(node_names), len(node_names)))
+    W = np.zeros((len(node_names), len(node_names)))
+    for node_name, parents in parent_dict.items():
+        for parent in parents:
+            cg.G.graph[
+                node_names.index(parent), node_names.index(node_name)
+            ] = -1
+            cg.G.graph[
+                node_names.index(node_name), node_names.index(parent)
+            ] = 1
+            W[node_names.index(parent), node_names.index(node_name)] = 1
+    return cg, W
+
+
+def gaussian_data(W, sample_size, seed=42):
+    """
+    Arguments:
+    W: adjacency matrix
+    sample_size: int
+    Returns:
+    X: data
+    """
+    d = W.shape[0]
+    X = np.random.randn(sample_size, d).dot(linalg.inv(np.eye(d) - W))
+    return X
 
 
 def draw_graph(nodes, edges):
