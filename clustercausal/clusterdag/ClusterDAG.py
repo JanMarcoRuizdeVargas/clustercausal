@@ -40,7 +40,8 @@ class ClusterDAG:
         self,
         cluster_mapping: dict,
         cluster_edges: list,
-        node_names: list | None = None,
+        cluster_bidirected_edges: list = None,
+        node_names: list = None,
     ):
         """
         Construct a CDAG object from a cluster dictionary
@@ -58,6 +59,7 @@ class ClusterDAG:
         self.true_dag = None
         self.cluster_mapping = cluster_mapping
         self.cluster_edges = cluster_edges
+        self.cluster_bidirected_edges = cluster_bidirected_edges
         self.node_names = node_names  # must be in same order as in data
         if self.node_names is None:  # This can mess up order of nodes!
             self.node_names = []
@@ -80,6 +82,8 @@ class ClusterDAG:
             cluster2 = edge.get_node2()
             cluster1_name = cluster1.get_name()
             cluster2_name = cluster2.get_name()
+            self.cluster_graph.G.remove_edge(edge)
+            flag = None
             if cluster1 != cluster2:
                 if (
                     cluster1_name,
@@ -88,21 +92,21 @@ class ClusterDAG:
                     cluster2_name,
                     cluster1_name,
                 ) not in self.cluster_edges:
-                    self.cluster_graph.G.remove_edge(edge)
                     # logging.info(
                     #     "removed edge:"
                     #     f" ({cluster1.get_name()},{cluster2.get_name()})"
                     # )
+                    pass  # previously removed edge here, was moved up
                 if (cluster1_name, cluster2_name) in self.cluster_edges:
-                    self.cluster_graph.G.remove_edge(edge)
                     self.cluster_graph.G.add_directed_edge(cluster1, cluster2)
+                    flag = "points_right"
                     # logging.info(
                     #     "oriented edge:"
                     #     f" ({cluster1.get_name()},{cluster2.get_name()})"
                     # )
                 if (cluster2_name, cluster1_name) in self.cluster_edges:
-                    self.cluster_graph.G.remove_edge(edge)
                     self.cluster_graph.G.add_directed_edge(cluster2, cluster1)
+                    flag = "points_left"
                     # logging.info(
                     #     "oriented edge:"
                     #     f" ({cluster2.get_name()},{cluster1.get_name()})"
@@ -111,7 +115,6 @@ class ClusterDAG:
                     cluster1_name,
                     cluster2_name,
                 ) in self.cluster_edges:
-                    self.cluster_graph.G.remove_edge(edge)
                     edge.endpoint1 = Endpoint.TAIL
                     edge.endpoint2 = Endpoint.TAIL
                     self.cluster_graph.G.add_edge(edge)
@@ -119,6 +122,34 @@ class ClusterDAG:
                     #     "unoriented edge:"
                     #     f" ({cluster2.get_name()},{cluster1.get_name()})"
                     # )
+                if (
+                    (cluster2_name, cluster1_name)
+                    in self.cluster_bidirected_edges
+                ) or (
+                    (cluster1_name, cluster2_name)
+                    in self.cluster_bidirected_edges
+                ):
+                    if flag is None:
+                        # add edge cluster1 <-> cluster2
+                        i = self.cluster_graph.G.node_map[cluster1]
+                        j = self.cluster_graph.G.node_map[cluster2]
+                        self.cluster_graph.G.graph[i, j] = 1
+                        self.cluster_graph.G.graph[j, i] = 1
+                        self.cluster_graph.G.adjust_dpath(i, j)
+                    elif flag == "points_left":
+                        # add edge cluster1 <-o cluster2
+                        i = self.cluster_graph.G.node_map[cluster1]
+                        j = self.cluster_graph.G.node_map[cluster2]
+                        self.cluster_graph.G.graph[i, j] = 1
+                        self.cluster_graph.G.graph[j, i] = 2
+                        self.cluster_graph.G.adjust_dpath(j, i)
+                    elif flag == "points_right":
+                        # add edge cluster1 o-> cluster2
+                        i = self.cluster_graph.G.node_map[cluster1]
+                        j = self.cluster_graph.G.node_map[cluster2]
+                        self.cluster_graph.G.graph[i, j] = 2
+                        self.cluster_graph.G.graph[j, i] = 1
+                        self.cluster_graph.G.adjust_dpath(i, j)
 
     def cdag_to_pag(self, forbidden_latent_edges: list):
         """
