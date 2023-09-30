@@ -39,8 +39,8 @@ class ClusterDAG:
     def __init__(
         self,
         cluster_mapping: dict,
-        cluster_edges: list,
-        cluster_bidirected_edges: list = None,
+        cluster_edges: list = [],
+        cluster_bidirected_edges: list = [],
         node_names: list = None,
     ):
         """
@@ -178,6 +178,7 @@ class ClusterDAG:
             dictionary = self.cluster_mapping
             c1_name = self.find_key(dictionary=dictionary, value=node1_name)
             c2_name = self.find_key(dictionary=dictionary, value=node2_name)
+            flag = None
             # If the nodes are in different clusters, check if the edge is forbidden
             if c1_name != c2_name:
                 if (c1_name, c2_name) not in self.cluster_edges and (
@@ -190,39 +191,39 @@ class ClusterDAG:
                     self.cg.G.add_directed_edge(
                         edge.get_node1(), edge.get_node2()
                     )
+                    flag = "points_right"
                 if (c2_name, c1_name) in self.cluster_edges:
                     self.cg.G.remove_edge(edge)
                     self.cg.G.add_directed_edge(
                         edge.get_node2(), edge.get_node1()
                     )
-                # TODO: Latent variables
-
-        # OLD CODE
-        """
-        # Remove edges that are forbidden by the CDAG
-        # self.background_knowledge = BackgroundKnowledge()
-        for edge in self.cg.G.get_graph_edges():
-            # There must be a better way to do this by only adressing the edges needed to be changed
-            node1 = edge.get_node1()
-            node2 = edge.get_node2()
-            cluster1 = self.node_indices[node1.get_name()]
-            cluster2 = self.node_indices[node2.get_name()]
-            if cluster1 != cluster2:
-                if (cluster1, cluster2) not in self.cluster_edges:
+                    flag = "points_left"
+                # With bidirected edges
+                if ((c2_name, c1_name) in self.cluster_bidirected_edges) or (
+                    (c1_name, c2_name) in self.cluster_bidirected_edges
+                ):
                     self.cg.G.remove_edge(edge)
-                    logging.info(
-                        "removed edge:"
-                        f" ({node1.get_name()},{node2.get_name()})"
-                    )
-                if (cluster1, cluster2) in self.cluster_edges:
-                    self.cg.G.remove_edge(edge)
-                    self.cg.G.add_directed_edge(node1, node2)
-                    logging.info(
-                        "oriented edge:"
-                        f" ({node1.get_name()},{node2.get_name()})"
-                    )
-                    """
-        # return self.cg
+                    if flag is None:
+                        # add edge cluster1 <-> cluster2
+                        i = self.cg.G.node_map[edge.get_node1()]
+                        j = self.cg.G.node_map[edge.get_node2()]
+                        self.cg.G.graph[i, j] = 1
+                        self.cg.G.graph[j, i] = 1
+                        self.cg.G.adjust_dpath(i, j)
+                    elif flag == "points_left":
+                        # add edge cluster1 <-o cluster2
+                        i = self.cg.G.node_map[edge.get_node1()]
+                        j = self.cg.G.node_map[edge.get_node2()]
+                        self.cg.G.graph[i, j] = 1
+                        self.cg.G.graph[j, i] = 2
+                        self.cg.G.adjust_dpath(j, i)
+                    elif flag == "points_right":
+                        # add edge cluster1 o-> cluster2
+                        i = self.cg.G.node_map[edge.get_node1()]
+                        j = self.cg.G.node_map[edge.get_node2()]
+                        self.cg.G.graph[i, j] = 2
+                        self.cg.G.graph[j, i] = 1
+                        self.cg.G.adjust_dpath(i, j)
 
     def draw_mpdag(self):
         """
