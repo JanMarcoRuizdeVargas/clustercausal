@@ -85,11 +85,36 @@ class ClusterPC:
 
         # print("Applying edge orientation rules")
         # As some nodes have no edge by CDAG definition, they never get tested so have Nonetype sepsets
-        # manually have to add an empty sepset for them else the Meek rules try to access NoneType
+        # OLD manually have to add an empty sepset for them else the Meek rules try to access NoneType
+        # manually have to add the parent set of i and parent set of j to sepset(i, j) and sepset(j, i)
         for i in range(no_of_var):
             for j in range(no_of_var):
-                append_value(self.cdag.cg.sepset, i, j, tuple(set()))
-                append_value(self.cdag.cg.sepset, j, i, tuple(set()))
+                node_i = self.cdag.get_key_by_value(self.cdag.cg.G.node_map, i)
+                node_j = self.cdag.get_key_by_value(self.cdag.cg.G.node_map, j)
+                edge = self.cdag.cg.G.get_edge(node_i, node_j)
+                if edge is None:
+                    parents_i = self.cdag.cg.G.get_parents(node_i)
+                    index_parents_i = [
+                        self.cdag.cg.G.node_map[parent] for parent in parents_i
+                    ]
+                    parents_j = self.cdag.cg.G.get_parents(node_j)
+                    index_parents_j = [
+                        self.cdag.cg.G.node_map[parent] for parent in parents_j
+                    ]
+                    append_value(
+                        self.cdag.cg.sepset, i, j, tuple(index_parents_i)
+                    )
+                    append_value(
+                        self.cdag.cg.sepset, i, j, tuple(index_parents_j)
+                    )
+                    append_value(
+                        self.cdag.cg.sepset, j, i, tuple(index_parents_i)
+                    )
+                    append_value(
+                        self.cdag.cg.sepset, j, i, tuple(index_parents_j)
+                    )
+                    # append_value(self.cdag.cg.sepset, j, i, tuple(set()))
+                    # append_value(self.cdag.cg.sepset, i, j, tuple(set()))
         cg_1 = self.cdag.cg
         background_knowledge = self.background_knowledge
         if self.uc_rule == 0:

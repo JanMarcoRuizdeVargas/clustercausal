@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import warnings
+import time
+import tqdm
+from itertools import permutations
 from queue import Queue
 from typing import List, Set, Tuple, Dict
 from numpy import ndarray
@@ -24,37 +27,34 @@ class ClusterFCI:
     def __init__(
         self,
         cdag: ClusterDAG,
-        data: ndarray,
-        alpha: float,
-        indep_test: str = "fisherz",
-        stable: bool = True,
-        uc_rule: int = 0,
-        uc_priority: int = 2,
-        background_knowledge: BackgroundKnowledge | None = None,
+        dataset: ndarray,
+        independence_test_method: str = fisherz,
+        alpha: float = 0.05,
+        depth: int = -1,
+        max_path_length: int = -1,
         verbose: bool = False,
-        show_progress: bool = True,
+        background_knowledge: BackgroundKnowledge | None = None,
         **kwargs,
-    ) -> None:
+    ):
         """
         Set parameters for the clust PC algorithm.
         """
         self.cdag = cdag
-        self.data = data
-        self.node_names = cdag.node_names
+        self.dataset = dataset
+        self.independence_test_method = independence_test_method
         self.alpha = alpha
-
-        self.stable = stable
-        self.uc_rule = uc_rule
-        self.uc_priority = uc_priority
-        self.background_knowledge = background_knowledge
+        self.depth = depth
+        self.max_path_length = max_path_length
         self.verbose = verbose
-        self.show_progress = show_progress
+        self.background_knowledge = background_knowledge
         self.kwargs = kwargs
-        self.cdag.cdag_to_mpdag()  # Get pruned MPDAG from CDAG
+        self.cdag.cdag_to_mpdag()
         self.cdag.get_cluster_topological_ordering()  # Get topological ordering of CDAG
 
         # Set independence test
-        self.cdag.cg.test = CIT(self.data, indep_test, **kwargs)
+        self.cdag.cg.test = CIT(
+            self.dataset, independence_test_method, **kwargs
+        )
 
     def run(self):
         """
@@ -62,102 +62,58 @@ class ClusterFCI:
         """
         start = time.time()
         no_of_var = self.data.shape[1]
-        # pbar = tqdm(total=no_of_var) if self.show_progress else None
+        assert len(self.cdag.node_names) == no_of_var
+        if self.verbose:
+            print(
+                f"Topological ordering {(self.cdag.cdag_list_of_topological_sort)}"
+            )
+        sepsets = set()
         for cluster_name in self.cdag.cdag_list_of_topological_sort:
-            print(f"\nBeginning work on cluster {cluster_name}")
-            cluster = self.cdag.get_node_by_name(
-                cluster_name, cg=self.cdag.cluster_graph
+            graph, sepsets_clust = self.cluster_fas_phase(cluster_name)
+            sepsets = sepsets.union(sepsets_clust)
+
+        end = time.time()
+        self.cdag.cg.PC_elapsed = end - start
+        print(f"Duration of algorithm was {self.cdag.cg.PC_elapsed:.2f}sec")
+
+    def cluster_fas_phase(self, cluster_name):
+        """
+        Runs the cluster phase of the C-FCI algorithm, which
+        is an adapted fas adjacency search from causallearn
+        """
+        start_cluster = time.time()
+        assert type(self.data) == np.ndarray
+        assert 0 < self.alpha < 1
+        depth = -1
+        cluster = ClusterDAG.get_node_by_name(
+            cluster_name, self.cdag.cluster_graph
+        )
+        cluster_node_indices = self.cdag.get_node_indices_of_cluster(cluster)
+        cluster_node_indices = np.array(sorted(cluster_node_indices))
+        local_graph = self.cdag.get_local_graph(cluster)
+
+        # Only to check max degree
+        local_graph_node_indices = np.array(
+            [self.cdag.cg.G.node_map[node] for node in local_graph.G.nodes]
+        )
+        local_graph_node_indices = np.array(sorted(local_graph_node_indices))
+
+        if self.verbose:
+            print(
+                f"Cluster node indices of {cluster.get_name()} are {cluster_node_indices}"
             )
-            for parent in self.cdag.cluster_graph.G.get_parents(cluster):
-                print(
-                    "\nInter phase between low cluster"
-                    f" {cluster.get_name()} and parent {parent.get_name()}"
+
+        if self.verbose:
+            print(
+                f"Local graph node indices of {cluster.get_name()} are {local_graph_node_indices}"
+            )
+        if self.show_progress:
+            if len(local_graph_node_indices) == 1:
+                pbar = tqdm(total=1)
+                pbar.reset()
+                pbar.update()
+                pbar.set_description(
+                    f"{cluster.get_name()} phase, no nonchild, nothing to do"
                 )
-                self.inter_cluster_phase(cluster, parent)
-            # TODO Apply Meek edge orientation rules here too?
-            print(f"\nIntra phase in cluster {cluster.get_name()}")
-            self.intra_cluster_phase(cluster)
-
-        def inter_cluster_phase(
-            cluster,
-            parent,
-            cdag=self.cdag,
-            dataset: ndarray = self.data,
-            independence_test_method: str = fisherz,
-            alpha: float = 0.05,
-            depth: int = -1,
-            max_path_length: int = -1,
-            verbose: bool = False,
-            background_knowledge: BackgroundKnowledge | None = None,
-            **kwargs,
-        ):
-            """
-            Runs the inter cluster phase of the C-FCI algorithm.
-            TODO
-            """
-
-            # Restrict to local graph
-            node_to_global_indice = cdag.cg.G.node_map  # Dict: Node -> int
-            local_graph = cdag.get_local_graph(cluster)
-            # map global_indices to local_indices
-            global_graph = cdag.cg
-            global_indices_to_local_indices = (
-                ClusterDAG.make_mapping_global_to_local_indices(
-                    global_graph, local_graph
-                )
-            )
-            local_indices_to_global_indices = (
-                ClusterDAG.make_mapping_local_to_global_indices(
-                    global_graph, local_graph
-                )
-            )
-            # global_indice_to_local_indice = {}
-            # for node in self.cdag.cg.G.nodes:
-            #     global_indice = self.cdag.cg.G.node_map[node]
-            #     local_indice = local_graph.G.node_map[node]
-            #     global_indice_to_local_indice[global_indice] = local_indice
-            # local_indice_to_global_indice = {}
-            # for global_indice in list(global_indice_to_local_indice.keys()):
-            #     local_indice = global_indice_to_local_indice[global_indice]
-            #     local_indice_to_global_indice[local_indice] = global_indice
-
-            # restrict data array via local graph
-            local_data = dataset[
-                :, list(local_indices_to_global_indices.keys())
-            ]
-            local_graph.G, sep_sets = fas(
-                data=local_data,
-                nodes=local_graph.G.nodes,
-                independence_test_method=self.cdag.cg.test,
-                alpha=self.alpha,
-                knowledge=self.background_knowledge,
-                depth=-1,
-                verbose=self.verbose,
-                stable=self.stable,
-                show_progress=self.show_progress,
-            )
-
-            # for node in local_graph.
-
-            # run FCI in local graph
-
-            # map edge changes back to global graph
-
-            # map sepset changes back to global graph
-
-        def intra_cluster_phase(cluster):
-            pass
-            # Restrict to local graph
-
-            # map global_indices to local_indices
-            global_indices_to_local_indices = {}
-
-            # run FCI in local graph
-
-            # map edge changes back to global graph
-
-            # map sepset changes back to global graph
-
-        @staticmethod
-        def get_global_indice_from_local_indice(local_indice):
-            pass
+            else:
+                pbar = tqdm(total=cluster_node_indices.shape[0])
