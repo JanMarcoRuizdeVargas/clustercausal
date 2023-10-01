@@ -83,7 +83,6 @@ class ClusterFCI:
             self.cluster_phase(cluster_name)
 
         # As some nodes have no edge by CDAG definition, they never get tested so have Nonetype sepsets
-        # OLD manually have to add an empty sepset for them else the Meek rules try to access NoneType
         # manually have to add the parent set of i and parent set of j to sepset(i, j) and sepset(j, i)
         for i in range(no_of_var):
             for j in range(no_of_var):
@@ -139,6 +138,16 @@ class ClusterFCI:
             self.max_path_length,
             self.verbose,
         )
+
+        # Transform self.cdag.cg.sepset (an nd.array) to a
+        # Dict[Tuple[int, int], Set[int]] = {}
+        # dict format as that is used by the rule-functions
+        sep_sets_dict: Dict[Tuple[int, int], Set[int]] = {}
+        for i in range(no_of_var):
+            for j in range(no_of_var):
+                if self.cdag.cg.sepset[i, j] is not None:
+                    sep_sets_dict[(i, j)] = self.cdag.cg.sepset[i, j]
+        self.cdag.cg.sepset = sep_sets_dict
 
         rule0(
             self.cdag.cg.G,

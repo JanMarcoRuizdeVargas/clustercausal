@@ -19,7 +19,7 @@ def test_clust_pc_correct_output():
 
 def test_clust_pc_to_base_pc():
     """
-    TODO based on noteboks, write a testcase generating and checking a couple cpc runs
+    based on noteboks, write a testcase generating and checking a couple cpc runs
     against the baseline pc algorithm
     """
     simulation = Simulator(
