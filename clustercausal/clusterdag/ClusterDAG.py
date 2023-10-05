@@ -61,7 +61,9 @@ class ClusterDAG:
         self.cluster_edges = cluster_edges
         self.cluster_bidirected_edges = cluster_bidirected_edges
         self.node_names = node_names  # must be in same order as in data
-        if self.node_names is None:  # This can mess up order of nodes!
+        if self.node_names is None:
+            # This can mess up order of nodes!
+            # Better to not give custom node_names
             self.node_names = []
             for cluster in self.cluster_mapping:
                 self.node_names.extend(self.cluster_mapping[cluster])

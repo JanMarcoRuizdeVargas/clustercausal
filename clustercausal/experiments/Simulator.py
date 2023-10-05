@@ -234,34 +234,41 @@ class Simulator:
         """
         if n_c_edges is None:
             n_c_edges = np.round(n_nodes * 1.2)
-        if dag_method == "erdos_renyi":
-            W_clust = DAG.erdos_renyi(
-                n_clusters,
-                n_c_edges,
-                weight_range=weight_range,
-                seed=seed,
-            )
-        elif dag_method == "scale_free":
-            W_clust = DAG.scale_free(
-                n_clusters,
-                n_c_edges,
-                weight_range=weight_range,
-                seed=seed,
-            )
-        elif dag_method == "bipartite":
-            W = DAG.bipartite(
-                n_clusters,
-                n_c_edges,
-                weight_range=weight_range,
-                seed=seed,
-            )
-        elif dag_method == "hierarchical":
-            W = DAG.hierarchical(
-                n_clusters,
-                n_c_edges,
-                weight_range=weight_range,
-                seed=seed,
-            )
+        # Simpler for gridsearches, always use erdos_renyi for cluster graph
+        W_clust = DAG.erdos_renyi(
+            n_clusters,
+            n_c_edges,
+            weight_range=weight_range,
+            seed=seed,
+        )
+        # if dag_method == "erdos_renyi":
+        #     W_clust = DAG.erdos_renyi(
+        #         n_clusters,
+        #         n_c_edges,
+        #         weight_range=weight_range,
+        #         seed=seed,
+        #     )
+        # elif dag_method == "scale_free":
+        #     W_clust = DAG.scale_free(
+        #         n_clusters,
+        #         n_c_edges,
+        #         weight_range=weight_range,
+        #         seed=seed,
+        #     )
+        # elif dag_method == "bipartite":
+        #     W = DAG.bipartite(
+        #         n_clusters,
+        #         n_c_edges,
+        #         weight_range=weight_range,
+        #         seed=seed,
+        #     )
+        # elif dag_method == "hierarchical":
+        #     W = DAG.hierarchical(
+        #         n_clusters,
+        #         n_c_edges,
+        #         weight_range=weight_range,
+        #         seed=seed,
+        #     )
         # elif dag_method == "low_rank":
         #     W = DAG.low_rank(
         #         n_nodes, n_edges, weight_range=weight_range, seed=seed
