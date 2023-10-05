@@ -160,10 +160,18 @@ class ClusterDAG:
         for edge in forbidden_latent_edges:
             self.cluster_graph.G.add_directed_edge(edge[0], edge[1])
 
-    def cdag_to_mpdag(self) -> CausalGraph:
+    def cdag_to_circle_mpdag(self) -> CausalGraph:
+        """
+        Constructs a MPDAG from a CDAG with circles where
+        edge orientation is ambiguous and stores it in
+        cdag.cg, a causallearn CausalGraph object.
+        Is used for FCI algorithm.
+        """
         """
         Constructs a MPDAG (maximally partially directed DAG)
-        from a CDAG and stores it in a causallearn CausalGraph.
+        from a CDAG and stores it in cdag.cg, a causallearn
+        CausalGraph object.
+        Is used for the PC algorithm
         """
         # Create the list of node_names needed for CausalGraph
         self.cg = CausalGraph(
@@ -179,6 +187,15 @@ class ClusterDAG:
             c1_name = self.find_key(dictionary=dictionary, value=node1_name)
             c2_name = self.find_key(dictionary=dictionary, value=node2_name)
             flag = None
+
+            if c1_name == c2_name:
+                # Replace edge --- with edge o-o
+                i = self.cg.G.node_map[edge.get_node1()]
+                j = self.cg.G.node_map[edge.get_node2()]
+                self.cg.G.graph[i, j] = 2
+                self.cg.G.graph[j, i] = 2
+                self.cg.G.adjust_dpath(i, j)
+
             # If the nodes are in different clusters, check if the edge is forbidden
             if c1_name != c2_name:
                 if (c1_name, c2_name) not in self.cluster_edges and (
@@ -224,6 +241,79 @@ class ClusterDAG:
                         self.cg.G.graph[i, j] = 2
                         self.cg.G.graph[j, i] = 1
                         self.cg.G.adjust_dpath(i, j)
+
+    def cdag_to_mpdag(self) -> CausalGraph:
+        """
+        Constructs a MPDAG (maximally partially directed DAG)
+        from a CDAG and stores it in cdag.cg, a causallearn
+        CausalGraph object.
+        Is used for the PC algorithm
+        """
+        # Create the list of node_names needed for CausalGraph
+        self.cg = CausalGraph(
+            no_of_var=len(self.node_names), node_names=self.node_names
+        )
+
+        # Remove edges that are forbidden by the CDAG
+        for edge in self.cg.G.get_graph_edges():
+            # Get clusters of the nodes from the edge
+            node1_name = edge.get_node1().get_name()
+            node2_name = edge.get_node2().get_name()
+            dictionary = self.cluster_mapping
+            c1_name = self.find_key(dictionary=dictionary, value=node1_name)
+            c2_name = self.find_key(dictionary=dictionary, value=node2_name)
+            flag = None
+            # # Replace edge --- with edge o-o
+            # i = self.cg.G.node_map[edge.get_node1()]
+            # j = self.cg.G.node_map[edge.get_node2()]
+            # self.cg.G.graph[i, j] = 2
+            # self.cg.G.graph[j, i] = 2
+            # self.cg.G.adjust_dpath(i, j)
+            # If the nodes are in different clusters, check if the edge is forbidden
+            if c1_name != c2_name:
+                if (c1_name, c2_name) not in self.cluster_edges and (
+                    c2_name,
+                    c1_name,
+                ) not in self.cluster_edges:
+                    self.cg.G.remove_edge(edge)
+                if (c1_name, c2_name) in self.cluster_edges:
+                    self.cg.G.remove_edge(edge)
+                    self.cg.G.add_directed_edge(
+                        edge.get_node1(), edge.get_node2()
+                    )
+                    flag = "points_right"
+                if (c2_name, c1_name) in self.cluster_edges:
+                    self.cg.G.remove_edge(edge)
+                    self.cg.G.add_directed_edge(
+                        edge.get_node2(), edge.get_node1()
+                    )
+                    flag = "points_left"
+                # With bidirected edges
+                # if ((c2_name, c1_name) in self.cluster_bidirected_edges) or (
+                #     (c1_name, c2_name) in self.cluster_bidirected_edges
+                # ):
+                #     self.cg.G.remove_edge(edge)
+                #     if flag is None:
+                #         # add edge cluster1 <-> cluster2
+                #         i = self.cg.G.node_map[edge.get_node1()]
+                #         j = self.cg.G.node_map[edge.get_node2()]
+                #         self.cg.G.graph[i, j] = 1
+                #         self.cg.G.graph[j, i] = 1
+                #         self.cg.G.adjust_dpath(i, j)
+                #     elif flag == "points_left":
+                #         # add edge cluster1 <-o cluster2
+                #         i = self.cg.G.node_map[edge.get_node1()]
+                #         j = self.cg.G.node_map[edge.get_node2()]
+                #         self.cg.G.graph[i, j] = 1
+                #         self.cg.G.graph[j, i] = 2
+                #         self.cg.G.adjust_dpath(j, i)
+                #     elif flag == "points_right":
+                #         # add edge cluster1 o-> cluster2
+                #         i = self.cg.G.node_map[edge.get_node1()]
+                #         j = self.cg.G.node_map[edge.get_node2()]
+                #         self.cg.G.graph[i, j] = 2
+                #         self.cg.G.graph[j, i] = 1
+                #         self.cg.G.adjust_dpath(i, j)
 
     def draw_mpdag(self):
         """

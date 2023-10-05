@@ -55,7 +55,7 @@ class ClusterFCI:
         self.background_knowledge = background_knowledge
         self.show_progress = show_progress
         self.kwargs = kwargs
-        self.cdag.cdag_to_mpdag()
+        self.cdag.cdag_to_circle_mpdag()
         self.cdag.get_cluster_topological_ordering()  # Get topological ordering of CDAG
 
         # Set independence test for cluster_phase
@@ -79,8 +79,6 @@ class ClusterFCI:
                 f"Topological ordering {(self.cdag.cdag_list_of_topological_sort)}"
             )
         # self.cdag.cg.sepset = set()
-        for cluster_name in self.cdag.cdag_list_of_topological_sort:
-            self.cluster_phase(cluster_name)
 
         # As some nodes have no edge by CDAG definition, they never get tested so have Nonetype sepsets
         # manually have to add the parent set of i and parent set of j to sepset(i, j) and sepset(j, i)
@@ -111,23 +109,26 @@ class ClusterFCI:
                         self.cdag.cg.sepset, j, i, tuple(index_parents_j)
                     )
 
+        for cluster_name in self.cdag.cdag_list_of_topological_sort:
+            self.cluster_phase(cluster_name)
+
         # reorient intra cluster edges to circle endpoints
-        for edge in self.cdag.cg.G.get_graph_edges():
-            node_1 = edge.get_node1()
-            node_2 = edge.get_node2()
-            node_1_name = node_1.get_name()
-            node_2_name = node_2.get_name()
-            node_1_cluster = ClusterDAG.get_key_by_value(
-                self.cdag.cluster_mapping, node_1_name
-            )
-            node_2_cluster = ClusterDAG.get_key_by_value(
-                self.cdag.cluster_mapping, node_2_name
-            )
-            if node_1_cluster == node_2_cluster:
-                self.cdag.cg.G.remove_edge(edge)
-                edge.set_endpoint1(Endpoint.CIRCLE)
-                edge.set_endpoint2(Endpoint.CIRCLE)
-                self.cdag.cg.G.add_edge(edge)
+        # for edge in self.cdag.cg.G.get_graph_edges():
+        #     node_1 = edge.get_node1()
+        #     node_2 = edge.get_node2()
+        #     node_1_name = node_1.get_name()
+        #     node_2_name = node_2.get_name()
+        #     node_1_cluster = ClusterDAG.get_key_by_value(
+        #         self.cdag.cluster_mapping, node_1_name
+        #     )
+        #     node_2_cluster = ClusterDAG.get_key_by_value(
+        #         self.cdag.cluster_mapping, node_2_name
+        #     )
+        #     if node_1_cluster == node_2_cluster:
+        #         self.cdag.cg.G.remove_edge(edge)
+        #         edge.set_endpoint1(Endpoint.CIRCLE)
+        #         edge.set_endpoint2(Endpoint.CIRCLE)
+        #         self.cdag.cg.G.add_edge(edge)
         sp = SepsetsPossibleDsep(
             self.dataset,
             self.cdag.cg.G,

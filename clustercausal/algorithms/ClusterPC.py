@@ -80,12 +80,8 @@ class ClusterPC:
             print(
                 f"Topological ordering {(self.cdag.cdag_list_of_topological_sort)}"
             )
-        for cluster_name in self.cdag.cdag_list_of_topological_sort:
-            self.cdag.cg = self.cluster_phase(cluster_name)
 
-        # print("Applying edge orientation rules")
         # As some nodes have no edge by CDAG definition, they never get tested so have Nonetype sepsets
-        # OLD manually have to add an empty sepset for them else the Meek rules try to access NoneType
         # manually have to add the parent set of i and parent set of j to sepset(i, j) and sepset(j, i)
         for i in range(no_of_var):
             for j in range(no_of_var):
@@ -115,6 +111,11 @@ class ClusterPC:
                     )
                     # append_value(self.cdag.cg.sepset, j, i, tuple(set()))
                     # append_value(self.cdag.cg.sepset, i, j, tuple(set()))
+
+        for cluster_name in self.cdag.cdag_list_of_topological_sort:
+            self.cdag.cg = self.cluster_phase(cluster_name)
+
+        # print("Applying edge orientation rules")
         cg_1 = self.cdag.cg
         background_knowledge = self.background_knowledge
         if self.uc_rule == 0:
