@@ -160,12 +160,12 @@ class ClusterDAG:
         for edge in forbidden_latent_edges:
             self.cluster_graph.G.add_directed_edge(edge[0], edge[1])
 
-    def cdag_to_circle_mpdag(self) -> CausalGraph:
+    def cdag_to_circle_mpdag(self, cg=None) -> CausalGraph:
         """
         Constructs a MPDAG from a CDAG with circles where
         edge orientation is ambiguous and stores it in
         cdag.cg, a causallearn CausalGraph object.
-        Is used for FCI algorithm.
+        Is used for FCI algorithm edge orientation and visualization.
         """
         """
         Constructs a MPDAG (maximally partially directed DAG)
@@ -174,9 +174,15 @@ class ClusterDAG:
         Is used for the PC algorithm
         """
         # Create the list of node_names needed for CausalGraph
-        self.cg = CausalGraph(
-            no_of_var=len(self.node_names), node_names=self.node_names
-        )
+        # print(
+        #     "WARNING: this graph should not be used for causal discovery, it is only for visualization purposes."
+        # )
+        if cg is None:
+            self.cg = CausalGraph(
+                no_of_var=len(self.node_names), node_names=self.node_names
+            )
+        else:  # This will be used in FCI when some edges are removed
+            self.cg = cg
 
         # Remove edges that are forbidden by the CDAG
         for edge in self.cg.G.get_graph_edges():

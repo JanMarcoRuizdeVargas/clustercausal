@@ -64,6 +64,8 @@ class ClusterPC:
         self.uc_rule = uc_rule
         self.uc_priority = uc_priority
         self.background_knowledge = background_knowledge
+        if background_knowledge is not None:
+            raise ValueError("Background knowledge is not supported for now")
         self.verbose = verbose
         self.show_progress = show_progress
         self.kwargs = kwargs
