@@ -127,7 +127,7 @@ class ClusterFCI:
         self.cdag.cdag_to_circle_mpdag(cg=self.cdag.cg)
         # reorientAllWith(self.cdag.cg.G, Endpoint.CIRCLE)
 
-        rule0(
+        self.rule0(
             self.cdag.cg.G,
             self.cdag.cg.G.nodes,
             self.sep_sets,
@@ -142,11 +142,11 @@ class ClusterFCI:
             self.sep_sets,
         )
 
-        # analog to reorientAllWith(graph, Endpoint.CIRCLE), but keeps arrows from C-DAG
+        # # analog to reorientAllWith(graph, Endpoint.CIRCLE), but keeps arrows from C-DAG
         self.cdag.cdag_to_circle_mpdag(cg=self.cdag.cg)
-        # reorientAllWith(self.cdag.cg.G, Endpoint.CIRCLE)
+        # # reorientAllWith(self.cdag.cg.G, Endpoint.CIRCLE)
 
-        rule0(
+        self.rule0(
             self.cdag.cg.G,
             self.cdag.cg.G.nodes,
             self.sep_sets,
@@ -591,272 +591,352 @@ class ClusterFCI:
 
         return self.cdag.cg
 
+    # class SepsetsPossibleDsep:
+    #     """
+    #     Copied from causallearn/search/ConstraintBased/FCI.py
+    #     """
 
-# class SepsetsPossibleDsep:
-#     """
-#     Copied from causallearn/search/ConstraintBased/FCI.py
-#     """
+    #     def __init__(
+    #         self,
+    #         data: ndarray,
+    #         graph: Graph,
+    #         independence_test,
+    #         alpha: float,
+    #         knowledge: BackgroundKnowledge | None,
+    #         depth: int,
+    #         maxPathLength: int,
+    #         verbose: bool,
+    #     ):
+    #         def _unique(column):
+    #             return np.unique(column, return_inverse=True)[1]
 
-#     def __init__(
-#         self,
-#         data: ndarray,
-#         graph: Graph,
-#         independence_test,
-#         alpha: float,
-#         knowledge: BackgroundKnowledge | None,
-#         depth: int,
-#         maxPathLength: int,
-#         verbose: bool,
-#     ):
-#         def _unique(column):
-#             return np.unique(column, return_inverse=True)[1]
+    #         if independence_test == chisq or independence_test == gsq:
+    #             data = np.apply_along_axis(_unique, 0, data).astype(np.int64)
 
-#         if independence_test == chisq or independence_test == gsq:
-#             data = np.apply_along_axis(_unique, 0, data).astype(np.int64)
+    #         self.data = data
+    #         self.graph = graph
+    #         self.independence_test = independence_test
+    #         self.alpha = alpha
+    #         self.knowledge = knowledge
+    #         self.depth = depth
+    #         self.maxPathLength = maxPathLength
+    #         self.verbose = verbose
 
-#         self.data = data
-#         self.graph = graph
-#         self.independence_test = independence_test
-#         self.alpha = alpha
-#         self.knowledge = knowledge
-#         self.depth = depth
-#         self.maxPathLength = maxPathLength
-#         self.verbose = verbose
+    #     def traverseSemiDirected(self, node: Node, edge: Edge) -> Node | None:
+    #         if node == edge.get_node1():
+    #             if (
+    #                 edge.get_endpoint1() == Endpoint.TAIL
+    #                 or edge.get_endpoint1() == Endpoint.CIRCLE
+    #             ):
+    #                 return edge.get_node2()
+    #         elif node == edge.get_node2():
+    #             if (
+    #                 edge.get_endpoint2() == Endpoint.TAIL
+    #                 or edge.get_endpoint2() == Endpoint.CIRCLE
+    #             ):
+    #                 return edge.get_node1()
+    #         return None
 
-#     def traverseSemiDirected(self, node: Node, edge: Edge) -> Node | None:
-#         if node == edge.get_node1():
-#             if (
-#                 edge.get_endpoint1() == Endpoint.TAIL
-#                 or edge.get_endpoint1() == Endpoint.CIRCLE
-#             ):
-#                 return edge.get_node2()
-#         elif node == edge.get_node2():
-#             if (
-#                 edge.get_endpoint2() == Endpoint.TAIL
-#                 or edge.get_endpoint2() == Endpoint.CIRCLE
-#             ):
-#                 return edge.get_node1()
-#         return None
+    #     def existsSemidirectedPath(
+    #         self, node_from: Node, node_to: Node, G: Graph
+    #     ) -> bool:
+    #         Q = Queue()
+    #         V = set()
+    #         Q.put(node_from)
+    #         V.add(node_from)
 
-#     def existsSemidirectedPath(
-#         self, node_from: Node, node_to: Node, G: Graph
-#     ) -> bool:
-#         Q = Queue()
-#         V = set()
-#         Q.put(node_from)
-#         V.add(node_from)
+    #         while not Q.empty():
+    #             node_t = Q.get_nowait()
+    #             if node_t == node_to:
+    #                 return True
 
-#         while not Q.empty():
-#             node_t = Q.get_nowait()
-#             if node_t == node_to:
-#                 return True
+    #             for node_u in G.get_adjacent_nodes(node_t):
+    #                 edge = G.get_edge(node_t, node_u)
+    #                 node_c = self.traverseSemiDirected(node_t, edge)
 
-#             for node_u in G.get_adjacent_nodes(node_t):
-#                 edge = G.get_edge(node_t, node_u)
-#                 node_c = self.traverseSemiDirected(node_t, edge)
+    #                 if node_c is None:
+    #                     continue
 
-#                 if node_c is None:
-#                     continue
+    #                 if V.__contains__(node_c):
+    #                     continue
 
-#                 if V.__contains__(node_c):
-#                     continue
+    #                 V.add(node_c)
+    #                 Q.put(node_c)
 
-#                 V.add(node_c)
-#                 Q.put(node_c)
+    #         return False
 
-#         return False
+    #     def existOnePathWithPossibleParents(
+    #         self, previous, node_w: Node, node_x: Node, node_b: Node, graph: Graph
+    #     ) -> bool:
+    #         if node_w == node_x:
+    #             return True
+    #         p = previous.get(node_w)
+    #         if p is None:
+    #             return False
+    #         for node_r in p:
+    #             if node_r == node_b or node_r == node_x:
+    #                 continue
 
-#     def existOnePathWithPossibleParents(
-#         self, previous, node_w: Node, node_x: Node, node_b: Node, graph: Graph
-#     ) -> bool:
-#         if node_w == node_x:
-#             return True
-#         p = previous.get(node_w)
-#         if p is None:
-#             return False
-#         for node_r in p:
-#             if node_r == node_b or node_r == node_x:
-#                 continue
+    #             if self.existsSemidirectedPath(
+    #                 node_r, node_x, graph
+    #             ) or self.existsSemidirectedPath(node_r, node_b, graph):
+    #                 if self.existOnePathWithPossibleParents(
+    #                     previous, node_r, node_x, node_b, graph
+    #                 ):
+    #                     return True
+    #         return False
 
-#             if self.existsSemidirectedPath(
-#                 node_r, node_x, graph
-#             ) or self.existsSemidirectedPath(node_r, node_b, graph):
-#                 if self.existOnePathWithPossibleParents(
-#                     previous, node_r, node_x, node_b, graph
-#                 ):
-#                     return True
-#         return False
+    #     def getPossibleDsep(
+    #         self, node_x: Node, node_y: Node, maxPathLength: int
+    #     ) -> Set[Node]:
+    #         dsep = set()
+    #         Q = Queue()
+    #         V = set()
+    #         previous = {node_x: None}
+    #         e = None
+    #         distance = 0
 
-#     def getPossibleDsep(
-#         self, node_x: Node, node_y: Node, maxPathLength: int
-#     ) -> Set[Node]:
-#         dsep = set()
-#         Q = Queue()
-#         V = set()
-#         previous = {node_x: None}
-#         e = None
-#         distance = 0
+    #         for node_b in self.graph.get_adjacent_nodes(node_x):
+    #             if node_b == node_y:
+    #                 continue
+    #             edge = (node_x, node_b)
+    #             if e is None:
+    #                 e = edge
+    #             Q.put(edge)
+    #             V.add(edge)
 
-#         for node_b in self.graph.get_adjacent_nodes(node_x):
-#             if node_b == node_y:
-#                 continue
-#             edge = (node_x, node_b)
-#             if e is None:
-#                 e = edge
-#             Q.put(edge)
-#             V.add(edge)
+    #             # addToList
+    #             node_list = previous.get(node_x)
+    #             if node_list is None:
+    #                 node_list = []
+    #             node_list.append(node_b)
+    #             # previous[node_x] = node_list
+    #             dsep.add(node_b)
 
-#             # addToList
-#             node_list = previous.get(node_x)
-#             if node_list is None:
-#                 node_list = []
-#             node_list.append(node_b)
-#             # previous[node_x] = node_list
-#             dsep.add(node_b)
+    #         while not Q.empty():
+    #             t = Q.get_nowait()
+    #             if e == t:
+    #                 e = None
+    #                 distance += 1
+    #                 if distance > 0 and distance > (
+    #                     1000 if maxPathLength == -1 else maxPathLength
+    #                 ):
+    #                     break
+    #             node_a, node_b = t
 
-#         while not Q.empty():
-#             t = Q.get_nowait()
-#             if e == t:
-#                 e = None
-#                 distance += 1
-#                 if distance > 0 and distance > (
-#                     1000 if maxPathLength == -1 else maxPathLength
-#                 ):
-#                     break
-#             node_a, node_b = t
+    #             if self.existOnePathWithPossibleParents(
+    #                 previous, node_b, node_x, node_b, self.graph
+    #             ):
+    #                 dsep.add(node_b)
 
-#             if self.existOnePathWithPossibleParents(
-#                 previous, node_b, node_x, node_b, self.graph
-#             ):
-#                 dsep.add(node_b)
+    #             for node_c in self.graph.get_adjacent_nodes(node_b):
+    #                 if node_c == node_a:
+    #                     continue
+    #                 if node_c == node_x:
+    #                     continue
+    #                 if node_c == node_y:
+    #                     continue
 
-#             for node_c in self.graph.get_adjacent_nodes(node_b):
-#                 if node_c == node_a:
-#                     continue
-#                 if node_c == node_x:
-#                     continue
-#                 if node_c == node_y:
-#                     continue
+    #                 # addToList
+    #                 node_list = previous.get(node_c)
+    #                 if node_list is None:
+    #                     node_list = []
+    #                 node_list.append(node_b)
+    #                 # previous[node_c] = node_list
 
-#                 # addToList
-#                 node_list = previous.get(node_c)
-#                 if node_list is None:
-#                     node_list = []
-#                 node_list.append(node_b)
-#                 # previous[node_c] = node_list
+    #                 # isDefCollider
+    #                 edge1 = self.graph.get_edge(node_a, node_b)
+    #                 edge2 = self.graph.get_edge(node_b, node_c)
+    #                 isDefCollider = (
+    #                     not (edge1 is None or edge2 is None)
+    #                     and edge1.get_proximal_endpoint(node_b) == Endpoint.ARROW
+    #                     and edge2.get_proximal_endpoint(node_b) == Endpoint.ARROW
+    #                 )
 
-#                 # isDefCollider
-#                 edge1 = self.graph.get_edge(node_a, node_b)
-#                 edge2 = self.graph.get_edge(node_b, node_c)
-#                 isDefCollider = (
-#                     not (edge1 is None or edge2 is None)
-#                     and edge1.get_proximal_endpoint(node_b) == Endpoint.ARROW
-#                     and edge2.get_proximal_endpoint(node_b) == Endpoint.ARROW
-#                 )
+    #                 if isDefCollider or self.graph.is_adjacent_to(node_a, node_c):
+    #                     u = (node_a, node_c)
+    #                     if V.__contains__(u):
+    #                         continue
 
-#                 if isDefCollider or self.graph.is_adjacent_to(node_a, node_c):
-#                     u = (node_a, node_c)
-#                     if V.__contains__(u):
-#                         continue
+    #                     V.add(u)
+    #                     Q.put(u)
 
-#                     V.add(u)
-#                     Q.put(u)
+    #                     if e is None:
+    #                         e = u
 
-#                     if e is None:
-#                         e = u
+    #         if dsep.__contains__(node_x):
+    #             dsep.remove(node_x)
+    #         if dsep.__contains__(node_y):
+    #             dsep.remove(node_y)
 
-#         if dsep.__contains__(node_x):
-#             dsep.remove(node_x)
-#         if dsep.__contains__(node_y):
-#             dsep.remove(node_y)
+    #         if self.verbose:
+    #             message = (
+    #                 "Possible-D-Sep("
+    #                 + node_x.get_name()
+    #                 + ", "
+    #                 + node_y.get_name()
+    #                 + ") = [ "
+    #             )
+    #             for dsep_node in dsep:
+    #                 message += dsep_node.get_name() + " "
+    #             message += "]"
+    #             print(message)
 
-#         if self.verbose:
-#             message = (
-#                 "Possible-D-Sep("
-#                 + node_x.get_name()
-#                 + ", "
-#                 + node_y.get_name()
-#                 + ") = [ "
-#             )
-#             for dsep_node in dsep:
-#                 message += dsep_node.get_name() + " "
-#             message += "]"
-#             print(message)
+    #         return dsep
 
-#         return dsep
+    #     def possibleParentOf(
+    #         self, node_z: Node, node_x: Node, bk: BackgroundKnowledge | None
+    #     ) -> bool:
+    #         return (
+    #             True
+    #             if bk is None
+    #             else not (
+    #                 bk.is_forbidden(node_z, node_x)
+    #                 or bk.is_required(node_x, node_z)
+    #             )
+    #         )
 
-#     def possibleParentOf(
-#         self, node_z: Node, node_x: Node, bk: BackgroundKnowledge | None
-#     ) -> bool:
-#         return (
-#             True
-#             if bk is None
-#             else not (
-#                 bk.is_forbidden(node_z, node_x)
-#                 or bk.is_required(node_x, node_z)
-#             )
-#         )
+    #     def possibleParents(
+    #         self,
+    #         node_x: Node,
+    #         nodes: List[Node],
+    #         knowledge: BackgroundKnowledge | None,
+    #     ) -> List[Node]:
+    #         possibleParents = list()
+    #         for node_z in nodes:
+    #             if self.possibleParentOf(node_z, node_x, knowledge):
+    #                 possibleParents.append(node_z)
+    #         return possibleParents
 
-#     def possibleParents(
-#         self,
-#         node_x: Node,
-#         nodes: List[Node],
-#         knowledge: BackgroundKnowledge | None,
-#     ) -> List[Node]:
-#         possibleParents = list()
-#         for node_z in nodes:
-#             if self.possibleParentOf(node_z, node_x, knowledge):
-#                 possibleParents.append(node_z)
-#         return possibleParents
+    #     def get_cond_set(self, node_1: Node, node_2: Node, max_path_length: int):
+    #         possibleDsepSet = self.getPossibleDsep(node_1, node_2, max_path_length)
+    #         possibleDsep = list(possibleDsepSet)
+    #         noEdgeRequired = (
+    #             True
+    #             if self.knowledge is None
+    #             else not (
+    #                 self.knowledge.is_required(node_1, node_2)
+    #                 or self.knowledge.is_required(node_2, node_1)
+    #             )
+    #         )
 
-#     def get_cond_set(self, node_1: Node, node_2: Node, max_path_length: int):
-#         possibleDsepSet = self.getPossibleDsep(node_1, node_2, max_path_length)
-#         possibleDsep = list(possibleDsepSet)
-#         noEdgeRequired = (
-#             True
-#             if self.knowledge is None
-#             else not (
-#                 self.knowledge.is_required(node_1, node_2)
-#                 or self.knowledge.is_required(node_2, node_1)
-#             )
-#         )
+    #         possParents = self.possibleParents(
+    #             node_1, possibleDsep, self.knowledge
+    #         )
 
-#         possParents = self.possibleParents(
-#             node_1, possibleDsep, self.knowledge
-#         )
+    #         _depth = 1000 if self.depth == -1 else self.depth
 
-#         _depth = 1000 if self.depth == -1 else self.depth
+    #         possible_sep_set = set()
 
-#         possible_sep_set = set()
+    #         for d in range(1 + min(_depth, len(possParents))):
+    #             cg = ChoiceGenerator(len(possParents), d)
+    #             choice = cg.next()
+    #             flag = False
+    #             while choice is not None:
+    #                 condSet = [
+    #                     self.graph.get_node_map()[possParents[index]]
+    #                     for index in choice
+    #                 ]
+    #                 choice = cg.next()
 
-#         for d in range(1 + min(_depth, len(possParents))):
-#             cg = ChoiceGenerator(len(possParents), d)
-#             choice = cg.next()
-#             flag = False
-#             while choice is not None:
-#                 condSet = [
-#                     self.graph.get_node_map()[possParents[index]]
-#                     for index in choice
-#                 ]
-#                 choice = cg.next()
+    #                 X, Y = (
+    #                     self.graph.get_node_map()[node_1],
+    #                     self.graph.get_node_map()[node_2],
+    #                 )
+    #                 p_value = self.independence_test(X, Y, tuple(condSet))
+    #                 independent = p_value > self.alpha
 
-#                 X, Y = (
-#                     self.graph.get_node_map()[node_1],
-#                     self.graph.get_node_map()[node_2],
-#                 )
-#                 p_value = self.independence_test(X, Y, tuple(condSet))
-#                 independent = p_value > self.alpha
+    #                 if independent and noEdgeRequired:
+    #                     for item in condSet:
+    #                         possible_sep_set.add(item)
+    #                     flag = True
+    #             if flag:
+    #                 return possible_sep_set
+    #         return None
 
-#                 if independent and noEdgeRequired:
-#                     for item in condSet:
-#                         possible_sep_set.add(item)
-#                     flag = True
-#             if flag:
-#                 return possible_sep_set
-#         return None
+    #     def get_sep_set(self, node_i: Node, node_k: Node) -> Set[int] | None:
+    #         condSet = self.get_cond_set(node_i, node_k, self.maxPathLength)
+    #         if condSet is None:
+    #             condSet = self.get_cond_set(node_k, node_i, self.maxPathLength)
+    #         return condSet
 
-#     def get_sep_set(self, node_i: Node, node_k: Node) -> Set[int] | None:
-#         condSet = self.get_cond_set(node_i, node_k, self.maxPathLength)
-#         if condSet is None:
-#             condSet = self.get_cond_set(node_k, node_i, self.maxPathLength)
-#         return condSet
+    # Adapted rule0 from causallearn, as that one has reorientAllwith(graph, Endpoint.CIRCLE)
+    # which I replace with self.cdag.cdag_to_circle_mpdag(cg=self.cdag.cg)
+
+    def rule0(
+        self,
+        graph: Graph,
+        nodes: List[Node],
+        sep_sets: Dict[Tuple[int, int], Set[int]],
+        knowledge: BackgroundKnowledge | None,
+        verbose: bool,
+    ):
+        # reorientAllWith(graph, Endpoint.CIRCLE)
+        self.cdag.cdag_to_circle_mpdag(cg=self.cdag.cg)
+        fci_orient_bk(knowledge, graph)
+        for node_b in nodes:
+            adjacent_nodes = graph.get_adjacent_nodes(node_b)
+            if len(adjacent_nodes) < 2:
+                continue
+
+            cg = ChoiceGenerator(len(adjacent_nodes), 2)
+            combination = cg.next()
+            while combination is not None:
+                node_a = adjacent_nodes[combination[0]]
+                node_c = adjacent_nodes[combination[1]]
+                combination = cg.next()
+
+                if graph.is_adjacent_to(node_a, node_c):
+                    continue
+                if graph.is_def_collider(node_a, node_b, node_c):
+                    continue
+                # check if is collider
+                sep_set = sep_sets.get(
+                    (
+                        graph.get_node_map()[node_a],
+                        graph.get_node_map()[node_c],
+                    )
+                )
+                if sep_set is not None and not sep_set.__contains__(
+                    graph.get_node_map()[node_b]
+                ):
+                    if not is_arrow_point_allowed(
+                        node_a, node_b, graph, knowledge
+                    ):
+                        continue
+                    if not is_arrow_point_allowed(
+                        node_c, node_b, graph, knowledge
+                    ):
+                        continue
+
+                    edge1 = graph.get_edge(node_a, node_b)
+                    graph.remove_edge(edge1)
+                    graph.add_edge(
+                        Edge(
+                            node_a,
+                            node_b,
+                            edge1.get_proximal_endpoint(node_a),
+                            Endpoint.ARROW,
+                        )
+                    )
+
+                    edge2 = graph.get_edge(node_c, node_b)
+                    graph.remove_edge(edge2)
+                    graph.add_edge(
+                        Edge(
+                            node_c,
+                            node_b,
+                            edge2.get_proximal_endpoint(node_c),
+                            Endpoint.ARROW,
+                        )
+                    )
+
+                    if verbose:
+                        print(
+                            "Orienting collider: "
+                            + node_a.get_name()
+                            + " *-> "
+                            + node_b.get_name()
+                            + " <-* "
+                            + node_c.get_name()
+                        )
