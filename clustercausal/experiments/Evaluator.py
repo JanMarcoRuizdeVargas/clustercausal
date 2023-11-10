@@ -171,11 +171,11 @@ class Evaluator:
         """
         Calculate the structural intervention distance bounds
         from the causal discovery toolbox R wrapper
-
         """
         nx_truth = causallearn_to_nx_adjmat(self.truth.graph)
         nx_est = causallearn_to_nx_adjmat(self.est.graph)
-        sid_lower, sid_upper = SID_CPDAG(nx_truth, get_CPDAG(nx_est))
+        # sid_lower, sid_upper = SID_CPDAG(nx_truth, get_CPDAG(nx_est))
+        sid_lower, sid_upper = SID_CPDAG(nx_truth, nx_est)
         sid = {}
         sid["sid_lower"] = int(sid_lower)
         sid["sid_upper"] = int(sid_upper)
@@ -207,3 +207,25 @@ class Evaluator:
                         edge = cg.G.get_edge(n_i, n_j)
                         cg.G.remove_edge(edge)
         return cg
+
+    @staticmethod
+    def get_cluster_connectivity(cdag: ClusterDAG):
+        """
+        Calculates the percentage of clusters
+        that are connected.
+        Input: ClusterDAG
+        Output: float in [0,1]
+        """
+        if len(cdag.cluster_edges) > 0:
+            return (
+                2
+                * len(cdag.cluster_edges)
+                / (
+                    (
+                        len(cdag.cluster_mapping)
+                        * (len(cdag.cluster_mapping) - 1)
+                    )
+                )
+            )
+        else:
+            return None

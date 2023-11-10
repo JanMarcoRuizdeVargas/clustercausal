@@ -19,3 +19,19 @@ def load_experiment_folder(directory):
         else:
             data = pd.concat([data, load_data(folder)])
     return data
+
+
+def load_experiment_graphs(directory):
+    """
+    Loads base_est_graph, cluster_est_graph and cluster_dag from
+    an experiment folder
+    """
+    with open(directory, "rb") as file:
+        base_est_graph = pickle.load(
+            os.path.join(directory, "base_est_graph.pkl")
+        )
+        cluster_est_graph = pickle.load(
+            os.path.join(directory, "cluster_est_graph.pkl")
+        )
+        cluster_dag = pickle.load(os.path.join(directory, "cluster_dag.pkl"))
+    return base_est_graph, cluster_est_graph, cluster_dag

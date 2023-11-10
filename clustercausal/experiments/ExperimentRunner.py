@@ -168,6 +168,9 @@ class ExperimentRunner:
         pruned_baseline_cg = Evaluator.get_cluster_pruned_benchmark(
             cdag=cluster_dag, cg=base_est_graph
         )
+        cluster_connectivity = Evaluator.get_cluster_connectivity(
+            cdag=cluster_dag
+        )
 
         base_evaluation = Evaluator(
             truth=cluster_dag.true_dag.G, est=base_est_graph.G
@@ -286,6 +289,7 @@ class ExperimentRunner:
             "true_sid_upper": true_sid_bounds["sid_upper"],
             "indep_test": self.indep_test,
             "empty_graph_shd": empty_graph_shd,
+            "cluster_connectivity": cluster_connectivity,
         }
         results = {
             "settings": settings_results,
