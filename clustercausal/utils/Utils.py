@@ -43,6 +43,7 @@ def gaussian_data(W, sample_size, seed=42):
     Returns:
     X: data
     """
+    np.random.seed(seed)
     d = W.shape[0]
     X = np.random.randn(sample_size, d).dot(linalg.inv(np.eye(d) - W))
     return X
