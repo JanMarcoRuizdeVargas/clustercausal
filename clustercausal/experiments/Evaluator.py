@@ -185,7 +185,7 @@ class Evaluator:
     @staticmethod
     def get_cluster_pruned_benchmark(cdag: ClusterDAG, cg: CausalGraph):
         """
-        Prunes the cg (thought to be of the baseline PC)
+        Prunes the cg (thought to be from baseline PC)
         with the missing edges of the cluster causal graph
         Used as an improved benchmark to see if a priori cluster knowledge
         makes a difference versus posteriori cluster knowledge
