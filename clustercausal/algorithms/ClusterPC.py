@@ -77,6 +77,7 @@ class ClusterPC:
     def run(self) -> CausalGraph:
         start = time.time()
         no_of_var = self.data.shape[1]
+        self.no_of_indep_tests_performed = 0
         assert len(self.cdag.node_names) == no_of_var
         if self.verbose:
             print(
@@ -258,6 +259,7 @@ class ClusterPC:
                     for S in combinations(Nonchilds_x_no_y, depth):
                         # print(f'Set S to be tested is {S}')
                         p = self.cdag.cg.ci_test(x, y, S)
+                        self.no_of_indep_tests_performed += 1
                         if p > self.alpha:
                             if self.verbose:
                                 print(

@@ -271,6 +271,26 @@ class ExperimentRunner:
         empty_shd_eval = Evaluator(truth=cluster_dag.true_dag.G, est=empty_G)
         empty_graph_shd = empty_shd_eval.get_shd()
 
+        # Perform C-PC with one cluster to calculate number of indep tests
+        one_cluster_dag_mapping = {"C1": cluster_dag.node_names}
+        one_cluster_dag_edges = []
+        one_cluster_cluster_dag = ClusterDAG(
+            cluster_mapping=one_cluster_dag_mapping,
+            cluster_edges=one_cluster_dag_edges,
+        )
+        one_cluster_pc = ClusterPC(
+            cdag=one_cluster_cluster_dag,
+            data=cluster_dag.data,
+            alpha=param_dict["alpha"],
+            indep_test=self.indep_test,
+            verbose=False,
+            show_progress=False,
+            true_dag=nx_true_dag,
+        )
+        one_cluster_est_graph = one_cluster_pc.run()
+        clust_no_indep_tests = cluster_pc.no_of_indep_tests_performed
+        one_clust_no_indep_tests = one_cluster_pc.no_of_indep_tests_performed
+
         settings_results = {
             "n_nodes": simulation.n_nodes,
             "n_edges": simulation.n_edges,
@@ -290,6 +310,8 @@ class ExperimentRunner:
             "indep_test": self.indep_test,
             "empty_graph_shd": empty_graph_shd,
             "cluster_connectivity": cluster_connectivity,
+            "C-PC indep tests": clust_no_indep_tests,
+            "Base indep tests": one_clust_no_indep_tests,
         }
         results = {
             "settings": settings_results,
