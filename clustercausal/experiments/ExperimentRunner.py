@@ -87,7 +87,9 @@ class ExperimentRunner:
         num_nonlin_experiments = 1
         for key in self.nonlinear_config.keys():
             num_nonlin_experiments *= len(self.nonlinear_config[key])
-        num_experiments = num_lin_experiments + num_nonlin_experiments
+        num_experiments = self.runs_per_configuration * (
+            num_lin_experiments + num_nonlin_experiments
+        )
         print(f"Number of experiments: {num_experiments}")
 
     def run_gridsearch_experiment(self):
