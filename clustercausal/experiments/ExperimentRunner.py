@@ -61,6 +61,8 @@ class ExperimentRunner:
             raise ValueError("sid must be either true or false")
         self.indep_test = self.config["indep_test"][0]
         self.config.pop("indep_test")
+        self.runs_per_configuration = self.config["runs_per_configuration"]
+        self.config.pop("runs_per_configuration")
 
         if "linear" in self.config["scm_method"]:
             self.linear_config = self.config.copy()
@@ -99,14 +101,20 @@ class ExperimentRunner:
                 itertools.product(*self.linear_config.values())
             )
             for params in lin_param_configuration:
-                self.run_experiment(params)
+                self.run_i = 0
+                for i in range(self.runs_per_configuration):
+                    self.run_i += 1
+                    self.run_experiment(params)
 
         if self.nonlinear_config is not None:
             nonlin_param_configuration = list(
                 itertools.product(*self.nonlinear_config.values())
             )
             for params in nonlin_param_configuration:
-                self.run_experiment(params)
+                self.run_i = 0
+                for i in range(self.runs_per_configuration):
+                    self.run_i += 1
+                    self.run_experiment(params)
 
     def run_experiment(self, params):
         """
@@ -227,6 +235,7 @@ class ExperimentRunner:
             + f"_{param_dict['n_edges']}_edges"
             + f"_{param_dict['n_clusters']}_clusters"
             + f"_{param_dict['distribution_type']}"
+            + f"_run{self.run_i}_"
             + str(datetime.datetime.now().strftime("%H-%M-%S-%f")[:-3])
         )
         file_path = os.path.join(

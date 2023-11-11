@@ -5,6 +5,9 @@
 # Should always be only one, will be popped away in ExperimentRunner
 discovery_alg : ['ClusterPC']
 
+# Runs per unique configuration - how often each configuration gets simulated
+runs_per_configuration: 1
+
 # any integer between 2 and 50
 n_nodes: [15]
 
