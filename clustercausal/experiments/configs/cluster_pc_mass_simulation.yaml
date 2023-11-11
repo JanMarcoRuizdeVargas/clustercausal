@@ -6,29 +6,28 @@
 discovery_alg : ['ClusterPC']
 
 # Runs per unique configuration - how often each configuration gets simulated
-runs_per_configuration: 1
+runs_per_configuration: 10
 
 # any integer between 2 and 50
-n_nodes: [10], [20], [30], [40], [50]
+n_nodes: [15]
 
 # will not be exactly graph edges due to gcastle dag generator, might be less edges
-n_edges: [10, 20] [20, 30], [30, 50], [40, 70], [50, 80]
+n_edges: [15, 30, 50, 80]
 
-# For more information see gcastle documentation
-dag_method: ['erdos_renyi', 'scale_free', 'hierarchical']
+dag_method: ['erdos_renyi']
 
-n_clusters: [4, 7]
+n_clusters: [1, 2, 3, 4, 5, 6, 7]
+# approximate number of edges in C-DAG if cluster_method is 'cdag'
+n_c_edges: [4]
 
 weight_range: 
   - [-1,2]
-
-# For more information see gcastle documentation
-lin_distribution_type: ['gauss', 'exp', 'gumbel']
-
-# For more information see gcastle documentation
-nonlin_distribution_type: ['mlp', 'mim', 'gp']
-
-# For more information see gcastle documentation
+#['gauss', 'exp', 'gumbel']
+lin_distribution_type: ['gauss']
+#['mlp', 'mim', 'gp']
+nonlin_distribution_type: []
+#['mlp', 'mim', 'gp']
+#'mim', 
 scm_method: ['linear', 'nonlinear'] 
 
 sample_size: [1000]
@@ -40,12 +39,11 @@ node_names: [null]
 noise_scale: [1]
 
 alpha: [0.01, 0.05, 0.1, 0.25, 0.5]
-# SID is very expensive to compute on large graphs
-sid: ['true']
 
-# For more information see causallearn documentation
-indep_test: ["fisherz", "chisq", "gsq", "kci"]
+# SID is very expensive to compute on large graphs
+sid: ['false']
+
+indep_test: ['fisherz']
 
 # Whether C-DAG or DAG is generated first, options: ['cdag', 'dag']
-# cdag leads to sparser clusters and even sparser graphs, dag leads to pretty dense C-DAGs
-cluster_method: ['cdag', 'dag']
+cluster_method: ['dag']
