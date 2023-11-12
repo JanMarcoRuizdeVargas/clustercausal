@@ -24,6 +24,7 @@ class Simulator:
                     not supported: low_rank
         n_clusters: number of clusters in the cluster graph, if None then random
         n_c_edges: number of edges in the cluster graph, if None then random
+                    is only used when dag_method is 'cdag'
         weight_range: range of weights of adjacency matrix in the causal graph
         distribution_type: distribution type of the data
                     methods supported:
