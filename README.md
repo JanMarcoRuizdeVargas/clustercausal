@@ -12,12 +12,13 @@ Clone the repository, create a  virtual environment
 ```
 python -m venv env
 ```
+
 activate the virtual environment
 ```
 env\Scripts\activate
 ```
+
 and install the requirements
-```
 ```
 pip install -r requirements.txt
 ```
