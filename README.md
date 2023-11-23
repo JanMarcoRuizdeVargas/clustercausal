@@ -8,6 +8,16 @@ Find my work in progress thesis at https://sharelatex.tum.de/read/npjkjggtqffh
 
 Installation: 
 
+Clone the repository, create a  virtual environment
+```
+python -m venv env
+```
+activate the virtual environment
+```
+env\Scripts\activate
+```
+and install the requirements
+```
 ```
 pip install -r requirements.txt
 ```
