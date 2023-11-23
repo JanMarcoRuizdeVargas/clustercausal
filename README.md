@@ -1,4 +1,4 @@
-# Cluster DAGs as background knowledge
+# Cluster DAGs as background knowledge for causal discovery
 
 This repository is being developed as part of my master thesis at TUM. 
 
