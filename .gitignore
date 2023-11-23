@@ -6,3 +6,5 @@ clustercausal/experiments/_results
 clustercausal/experiments/_results_storage
 clustercausal/experiments/archive_results
 Archive/old_results
+Archive
+__pycache__
