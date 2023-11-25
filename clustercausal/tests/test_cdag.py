@@ -9,11 +9,7 @@ from clustercausal.clusterdag.ClusterDAG import ClusterDAG
 
 
 def test_cdag_initialization():
-    """
-    TODO based on noteboks, write a testcase generating a couple clusterings and verifying
-    CDAG class produces correct outputs
-    !!! make a test function for each method of CDAG
-    """
+    """ """
     debug_nodes = ["0", "1", "2", "3", "4", "5", "6", "7"]
     debug_edges = [
         ("0", "1"),
@@ -81,6 +77,67 @@ def test_cdag_to_mpdag():
     assert isinstance(cdag.cg.G, GeneralGraph)
     assert isinstance(no_clust_cdag.cg, CausalGraph)
     assert isinstance(no_clust_cdag.cg.G, GeneralGraph)
+
+
+def test_cdag_to_circle_mpdag():
+    cdag = ClusterDAG(
+        cluster_mapping={
+            "C1": ["X1", "X2"],
+            "C2": ["X3", "X4"],
+            "C3": ["X5", "X6"],
+        },
+        cluster_edges=[("C1", "C2"), ("C2", "C3")],
+        cluster_bidirected_edges=[("C2", "C3")],
+    )
+    cdag.cdag_to_circle_mpdag()
+
+    assert isinstance(cdag.cg, CausalGraph)
+    assert isinstance(cdag.cg.G, GeneralGraph)
+    assert cdag.bidir_paths == {
+        "C1": [["C1"]],
+        "C2": [["C2"], ["C2", "C3"]],
+        "C3": [["C3"], ["C3", "C2"]],
+    }
+    assert cdag.collider_paths == {
+        "C1": [["C1"], ["C1", "C2"], ["C1", "C2", "C3"]],
+        "C2": [["C2"], ["C2", "C3"]],
+        "C3": [["C3"], ["C3", "C2"]],
+    }
+
+    cdag = ClusterDAG(
+        cluster_mapping={
+            "C1": ["X1", "X2"],
+            "C2": ["X3", "X4"],
+            "C3": ["X5", "X6"],
+            "C4": ["X7", "X8"],
+        },
+        cluster_edges=[("C1", "C2"), ("C2", "C3"), ("C1", "C4")],
+        cluster_bidirected_edges=[("C2", "C3"), ("C3", "C4")],
+    )
+    cdag.cdag_to_circle_mpdag()
+
+    assert isinstance(cdag.cg, CausalGraph)
+    assert isinstance(cdag.cg.G, GeneralGraph)
+    assert cdag.bidir_paths == {
+        "C1": [["C1"]],
+        "C2": [["C2"], ["C2", "C3"], ["C2", "C3", "C4"]],
+        "C3": [["C3"], ["C3", "C2"], ["C3", "C4"]],
+        "C4": [["C4"], ["C4", "C3"], ["C4", "C3", "C2"]],
+    }
+    assert cdag.collider_paths == {
+        "C1": [
+            ["C1"],
+            ["C1", "C2"],
+            ["C1", "C2", "C3"],
+            ["C1", "C2", "C3", "C4"],
+            ["C1", "C4"],
+            ["C1", "C4", "C3"],
+            ["C1", "C4", "C3", "C2"],
+        ],
+        "C2": [["C2"], ["C2", "C3"], ["C2", "C3", "C4"]],
+        "C3": [["C3"], ["C3", "C2"], ["C3", "C4"]],
+        "C4": [["C4"], ["C4", "C3"], ["C4", "C3", "C2"]],
+    }
 
 
 def test_draw_mpdag():
