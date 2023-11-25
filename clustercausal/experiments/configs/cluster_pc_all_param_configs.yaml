@@ -28,7 +28,7 @@ lin_distribution_type: ['gauss', 'exp', 'gumbel']
 # For more information see gcastle documentation
 nonlin_distribution_type: ['mlp', 'mim', 'gp']
 
-# For more information see gcastle documentation
+# Never change this line, it is for coding logic
 scm_method: ['linear', 'nonlinear'] 
 
 sample_size: [1000]

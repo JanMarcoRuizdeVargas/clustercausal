@@ -272,13 +272,13 @@ class ClusterPC:
                                     self.cdag.cg.G.nodes[y],
                                 )
                                 if edge1 is not None:
-                                    self.cdag.cg.G.remove_edge(edge1)
+                                    self.cdag.remove_edge(edge1)
                                 edge2 = self.cdag.cg.G.get_edge(
                                     self.cdag.cg.G.nodes[y],
                                     self.cdag.cg.G.nodes[x],
                                 )
                                 if edge2 is not None:
-                                    self.cdag.cg.G.remove_edge(edge2)
+                                    self.cdag.remove_edge(edge2)
                                 append_value(self.cdag.cg.sepset, x, y, S)
                                 append_value(self.cdag.cg.sepset, y, x, S)
                                 break
@@ -301,73 +301,7 @@ class ClusterPC:
                     # print(f'Type of sepsets is {type(sepsets)}')
                     append_value(self.cdag.cg.sepset, x, y, tuple(sepsets))
                     append_value(self.cdag.cg.sepset, y, x, tuple(sepsets))
-                    # x_node = self.cdag.get_key_by_value(
-                    #     self.cdag.cg.G.node_map, x
-                    # )
-                    # y_node = self.cdag.get_key_by_value(
-                    #     self.cdag.cg.G.node_map, y
-                    # )
-                    # ---------------------------------------------------
-                    # Checks in neighbors of y
-                    # Theoretically unnecessary but practically helpful
-                    # if y in np.intersect1d(
-                    #     cluster_node_indices, local_graph_node_indices
-                    # ):
-                    #     # Consider separating sets in neighbors(y)
-                    #     Neigh_y = self.cdag.cg.neighbors(y)
-                    #     if len(Neigh_y) < depth - 1:
-                    #         continue
-                    #     if self.verbose:
-                    #         print(
-                    #             f"Neighbors of {y} in local graph are {Neigh_y}"
-                    #         )
-                    #     Neighbors_y_no_x = np.delete(
-                    #         Neigh_y, np.where(Neigh_y == x)
-                    #     )
-                    #     for S in combinations(Neighbors_y_no_x, depth):
-                    #         # print(f'Set S to be tested is {S}')
-                    #         p = self.cdag.cg.ci_test(x, y, S)
-                    #         if p > self.alpha:
-                    #             if self.verbose:
-                    #                 print(
-                    #                     "%d ind %d | %s with p-value %f"
-                    #                     % (x, y, S, p)
-                    #                 )
-                    #             if not self.stable:
-                    #                 edge1 = self.cdag.cg.G.get_edge(
-                    #                     self.cdag.cg.G.nodes[x],
-                    #                     self.cdag.cg.G.nodes[y],
-                    #                 )
-                    #                 if edge1 is not None:
-                    #                     self.cdag.cg.G.remove_edge(edge1)
-                    #                 edge2 = self.cdag.cg.G.get_edge(
-                    #                     self.cdag.cg.G.nodes[y],
-                    #                     self.cdag.cg.G.nodes[x],
-                    #                 )
-                    #                 if edge2 is not None:
-                    #                     self.cdag.cg.G.remove_edge(edge2)
-                    #                 append_value(self.cdag.cg.sepset, x, y, S)
-                    #                 append_value(self.cdag.cg.sepset, y, x, S)
-                    #                 break
-                    #             else:
-                    #                 edge_removal.append(
-                    #                     (x, y)
-                    #                 )  # after all conditioning sets at
-                    #                 edge_removal.append(
-                    #                     (y, x)
-                    #                 )  # depth l have been considered
-                    #                 for s in S:
-                    #                     sepsets.add(s)
-                    #         else:
-                    #             if self.verbose:
-                    #                 print(
-                    #                     "%d dep %d | %s with p-value %f"
-                    #                     % (x, y, S, p)
-                    #                 )
-                    #     # print(f'Added sepset: {x} !- {y} | {tuple(sepsets)}')
-                    #     # print(f'Type of sepsets is {type(sepsets)}')
-                    #     append_value(self.cdag.cg.sepset, x, y, tuple(sepsets))
-                    #     append_value(self.cdag.cg.sepset, y, x, tuple(sepsets))
+
             if self.show_progress:
                 pbar.refresh()
 
@@ -376,7 +310,7 @@ class ClusterPC:
                     self.cdag.cg.G.nodes[x], self.cdag.cg.G.nodes[y]
                 )
                 if edge1 is not None:
-                    self.cdag.cg.G.remove_edge(edge1)
+                    self.cdag.remove_edge(edge1)
                     x_name = self.cdag.get_key_by_value(
                         self.cdag.cg.G.node_map, x
                     )

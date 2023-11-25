@@ -13,6 +13,7 @@ from causallearn.graph.GraphClass import CausalGraph
 from causallearn.utils.PCUtils.BackgroundKnowledge import BackgroundKnowledge
 from causallearn.graph.GraphNode import GraphNode
 from causallearn.graph.Node import Node
+from causallearn.graph.Edge import Edge
 from causallearn.graph.GeneralGraph import GeneralGraph
 from causallearn.graph.Endpoint import Endpoint
 
@@ -153,27 +154,22 @@ class ClusterDAG:
                         self.cluster_graph.G.graph[j, i] = 1
                         self.cluster_graph.G.adjust_dpath(i, j)
 
-    def cdag_to_pag(self, forbidden_latent_edges: list):
-        """
-        If a C-DAG with latent variables is wanted, this function
-        adds the latent edges to the cluster graph.
-        TODO
-        """
-        for edge in forbidden_latent_edges:
-            self.cluster_graph.G.add_directed_edge(edge[0], edge[1])
+    # def cdag_to_pag(self, forbidden_latent_edges: list):
+    #     """
+    #     If a C-DAG with latent variables is wanted, this function
+    #     adds the latent edges to the cluster graph.
+    #     TODO
+    #     """
+    #     for edge in forbidden_latent_edges:
+    #         self.cluster_graph.G.add_directed_edge(edge[0], edge[1])
 
     def cdag_to_circle_mpdag(self, cg=None) -> CausalGraph:
         """
         Constructs a MPDAG from a CDAG with circles where
         edge orientation is ambiguous and stores it in
-        cdag.cg, a causallearn CausalGraph object.
+        cdag.cg, a causallearn CausalGraph object. It also adds edges
+        where inducing paths may be possible.
         Is used for FCI algorithm edge orientation and visualization.
-        """
-        """
-        Constructs a MPDAG (maximally partially directed DAG)
-        from a CDAG and stores it in cdag.cg, a causallearn
-        CausalGraph object.
-        Is used for the PC algorithm
         """
         # Create the list of node_names needed for CausalGraph
         # print(
@@ -482,6 +478,72 @@ class ClusterDAG:
         subgraph.reconstitute_dpath(subgraph.get_graph_edges())
 
         return subgraph
+
+    # Removes the given edge from the graph.
+    # Copied from causallearn as I had to change it slightly to
+    # reduce runtime
+    def remove_edge(self, edge: Edge):
+        node1 = edge.get_node1()
+        node2 = edge.get_node2()
+
+        i = self.cg.G.node_map[node1]
+        j = self.cg.G.node_map[node2]
+
+        out_of = self.cg.G.graph[j, i]
+        in_to = self.cg.G.graph[i, j]
+
+        end1 = edge.get_numerical_endpoint1()
+        end2 = edge.get_numerical_endpoint2()
+
+        is_fully_directed = self.cg.G.is_parent_of(
+            node1, node2
+        ) or self.cg.G.is_parent_of(node2, node1)
+
+        if (
+            out_of == Endpoint.TAIL_AND_ARROW.value
+            and in_to == Endpoint.TAIL_AND_ARROW.value
+        ):
+            if end1 == Endpoint.ARROW.value:
+                self.cg.G.graph[j, i] = -1
+                self.cg.G.graph[i, j] = -1
+            else:
+                if end1 == -1:
+                    self.cg.G.graph[i, j] = Endpoint.ARROW.value
+                    self.cg.G.graph[j, i] = Endpoint.ARROW.value
+        else:
+            if (
+                out_of == Endpoint.ARROW_AND_ARROW.value
+                and in_to == Endpoint.TAIL_AND_ARROW.value
+            ):
+                if end1 == Endpoint.ARROW.value:
+                    self.cg.G.graph[j, i] = 1
+                    self.cg.G.graph[i, j] = -1
+                else:
+                    if end1 == -1:
+                        self.cg.G.graph[j, i] = Endpoint.ARROW.value
+                        self.cg.G.graph[i, j] = Endpoint.ARROW.value
+            else:
+                if (
+                    out_of == Endpoint.TAIL_AND_ARROW.value
+                    and in_to == Endpoint.ARROW_AND_ARROW.value
+                ):
+                    if end1 == Endpoint.ARROW.value:
+                        self.cg.G.graph[j, i] = -1
+                        self.cg.G.graph[i, j] = 1
+                    else:
+                        if end1 == -1:
+                            self.cg.G.graph[j, i] = Endpoint.ARROW.value
+                            self.cg.G.graph[i, j] = Endpoint.ARROW.value
+                else:
+                    if end1 == in_to and end2 == out_of:
+                        self.cg.G.graph[j, i] = 0
+                        self.cg.G.graph[i, j] = 0
+        # This is a dirty fix to improve runtime
+        # Causallearn rebuilds all dpaths after each edge removal
+        # which is very slow and is not needed for this algorithm
+        # May lead to cycles in extreme cases
+        # if is_fully_directed:
+        #     self.reconstitute_dpath(self.get_graph_edges())
 
     @staticmethod
     def make_mapping_local_to_global_indices(
