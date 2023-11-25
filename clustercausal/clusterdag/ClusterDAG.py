@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import networkx as nx
 import causallearn
+import copy
 
 # import castle
 import pydot
@@ -138,21 +139,33 @@ class ClusterDAG:
                         j = self.cluster_graph.G.node_map[cluster2]
                         self.cluster_graph.G.graph[i, j] = 1
                         self.cluster_graph.G.graph[j, i] = 1
-                        self.cluster_graph.G.adjust_dpath(i, j)
+                        # self.cluster_graph.G.adjust_dpath(i, j)
                     elif flag == "points_left":
                         # add edge cluster1 <-o cluster2
                         i = self.cluster_graph.G.node_map[cluster1]
                         j = self.cluster_graph.G.node_map[cluster2]
-                        self.cluster_graph.G.graph[i, j] = 1
-                        self.cluster_graph.G.graph[j, i] = 2
-                        self.cluster_graph.G.adjust_dpath(j, i)
+                        # self.cluster_graph.G.graph[i, j] = 1
+                        # self.cluster_graph.G.graph[j, i] = 2
+                        self.cluster_graph.G.graph[
+                            i, j
+                        ] = Endpoint.ARROW_AND_ARROW.value
+                        self.cluster_graph.G.graph[
+                            j, i
+                        ] = Endpoint.TAIL_AND_ARROW.value
+                        # self.cluster_graph.G.adjust_dpath(j, i)
                     elif flag == "points_right":
                         # add edge cluster1 o-> cluster2
                         i = self.cluster_graph.G.node_map[cluster1]
                         j = self.cluster_graph.G.node_map[cluster2]
-                        self.cluster_graph.G.graph[i, j] = 2
-                        self.cluster_graph.G.graph[j, i] = 1
-                        self.cluster_graph.G.adjust_dpath(i, j)
+                        # self.cluster_graph.G.graph[i, j] = 2
+                        # self.cluster_graph.G.graph[j, i] = 1
+                        self.cluster_graph.G.graph[
+                            i, j
+                        ] = Endpoint.TAIL_AND_ARROW.value
+                        self.cluster_graph.G.graph[
+                            j, i
+                        ] = Endpoint.ARROW_AND_ARROW.value
+                        # self.cluster_graph.G.adjust_dpath(i, j)
 
     # def cdag_to_pag(self, forbidden_latent_edges: list):
     #     """
@@ -171,15 +184,11 @@ class ClusterDAG:
         where inducing paths may be possible.
         Is used for FCI algorithm edge orientation and visualization.
         """
-        # Create the list of node_names needed for CausalGraph
-        # print(
-        #     "WARNING: this graph should not be used for causal discovery, it is only for visualization purposes."
-        # )
         if cg is None:
             self.cg = CausalGraph(
                 no_of_var=len(self.node_names), node_names=self.node_names
             )
-        else:  # This will be used in FCI when some edges are removed
+        else:
             self.cg = cg
 
         # Remove edges that are forbidden by the CDAG
@@ -198,7 +207,7 @@ class ClusterDAG:
                 j = self.cg.G.node_map[edge.get_node2()]
                 self.cg.G.graph[i, j] = 2
                 self.cg.G.graph[j, i] = 2
-                self.cg.G.adjust_dpath(i, j)
+                # self.cg.G.adjust_dpath(i, j)
 
             # If the nodes are in different clusters, check if the edge is forbidden
             if c1_name != c2_name:
@@ -206,15 +215,15 @@ class ClusterDAG:
                     c2_name,
                     c1_name,
                 ) not in self.cluster_edges:
-                    self.cg.G.remove_edge(edge)
+                    self.remove_edge(edge)
                 if (c1_name, c2_name) in self.cluster_edges:
-                    self.cg.G.remove_edge(edge)
+                    self.remove_edge(edge)
                     self.cg.G.add_directed_edge(
                         edge.get_node1(), edge.get_node2()
                     )
                     flag = "points_right"
                 if (c2_name, c1_name) in self.cluster_edges:
-                    self.cg.G.remove_edge(edge)
+                    self.remove_edge(edge)
                     self.cg.G.add_directed_edge(
                         edge.get_node2(), edge.get_node1()
                     )
@@ -223,28 +232,239 @@ class ClusterDAG:
                 if ((c2_name, c1_name) in self.cluster_bidirected_edges) or (
                     (c1_name, c2_name) in self.cluster_bidirected_edges
                 ):
-                    self.cg.G.remove_edge(edge)
+                    self.remove_edge(edge)
                     if flag is None:
                         # add edge cluster1 <-> cluster2
                         i = self.cg.G.node_map[edge.get_node1()]
                         j = self.cg.G.node_map[edge.get_node2()]
                         self.cg.G.graph[i, j] = 1
                         self.cg.G.graph[j, i] = 1
-                        self.cg.G.adjust_dpath(i, j)
+                        # self.cg.G.adjust_dpath(i, j)
                     elif flag == "points_left":
                         # add edge cluster1 <-o cluster2
                         i = self.cg.G.node_map[edge.get_node1()]
                         j = self.cg.G.node_map[edge.get_node2()]
                         self.cg.G.graph[i, j] = 1
                         self.cg.G.graph[j, i] = 2
-                        self.cg.G.adjust_dpath(j, i)
+                        # self.cg.G.adjust_dpath(j, i)
                     elif flag == "points_right":
                         # add edge cluster1 o-> cluster2
                         i = self.cg.G.node_map[edge.get_node1()]
                         j = self.cg.G.node_map[edge.get_node2()]
                         self.cg.G.graph[i, j] = 2
                         self.cg.G.graph[j, i] = 1
-                        self.cg.G.adjust_dpath(i, j)
+                        # self.cg.G.adjust_dpath(i, j)
+
+        # Add edges that may be there due to an inducing path
+        # First find all bidirected paths including clusters
+        self.bidir_paths = {}
+        for c_name in self.cluster_mapping.keys():
+            self.bidir_paths[c_name] = [[c_name]]
+        for i in range(len(self.cluster_mapping.keys()) - 2):
+            # district_mapping[c_name] contains the bidirected
+            # paths originating from c_name
+            for c_name in self.cluster_mapping.keys():
+                for bidir_path in self.bidir_paths[c_name]:
+                    if len(bidir_path) == i + 1:
+                        for bidir_edge in self.cluster_bidirected_edges:
+                            # Add the new bidirected path that is one edge longer
+                            if bidir_path[-1] == bidir_edge[0]:
+                                if bidir_edge[1] not in bidir_path:
+                                    self.bidir_paths[c_name].append(
+                                        bidir_path + [bidir_edge[1]]
+                                    )
+                            if bidir_path[-1] == bidir_edge[1]:
+                                if bidir_edge[0] not in bidir_path:
+                                    self.bidir_paths[c_name].append(
+                                        bidir_path + [bidir_edge[0]]
+                                    )
+        # Then find all collider paths in the cluster_graph
+        self.collider_paths = copy.deepcopy(self.bidir_paths)
+        for c_edge_1 in self.cluster_edges:
+            for c_edge_2 in self.cluster_edges:
+                for bidir_path in self.bidir_paths[c_edge_1[1]]:
+                    if c_edge_2[1] not in bidir_path:
+                        if c_edge_2[1] != c_edge_1[0]:
+                            self.collider_paths[c_edge_1[0]].append(
+                                [[c_edge_1[0]] + bidir_path + [c_edge_2[1]]]
+                            )
+
+        # # Then find all collider paths in the cluster_graph
+        # self.collider_paths = copy.deepcopy(self.bidir_paths)
+        # for c_name in self.cluster_mapping.keys():
+        #     for bidir_path in self.bidir_paths[c_name]:
+        #         for c_edge_1 in self.cluster_edges:
+        #             # for c_edge_2 in self.cluster_edges:
+        #             for bidir_path in self.bidir_paths[c_edge_1[1]]:
+        #                 self.collider_paths[c_edge_1[0]].append(
+        #                     [[c_edge_1[0]] + bidir_path]
+        #                 )
+        #                 # if c_edge_2[1] not in bidir_path:
+        #                 #     if c_edge_2[1] != c_edge_1[0]:
+        #                 #         self.collider_paths[c_edge_1[0]].append(
+        #                 #             [[c_edge_1[0]] + bidir_path + [c_edge_2[1]]]
+        #                 #         )
+
+        # for cluster_edge in self.cluster_edges:
+        #     pass
+        # if cluster_edge[1] == bidir_path[0]:
+        #     # add cluster_edge[0] -> bidir_paths to collider_paths[cluster_edge[0]]
+        #     if cluster_edge[0] not in bidir_path:
+        #         self.collider_paths[cluster_edge[0]].append(
+        #             [[cluster_edge[0]] + bidir_path]
+        #         )
+        #         for cluster_edge_2 in self.cluster_edges:
+        #             # add cluster_edge[0] -> bidir_paths <- cluster_edge_2[1] to collider_paths[cluster_edge[0]]
+        #             if (
+        #                 cluster_edge_2[1]
+        #                 not in [[cluster_edge[0]] + bidir_path]
+        #                 and cluster_edge[0] != cluster_edge_2[1]
+        #             ):
+        #                 self.collider_paths[
+        #                     cluster_edge[0]
+        #                 ].append(
+        #                     [
+        #                         [cluster_edge[0]]
+        #                         + bidir_path
+        #                         + [cluster_edge_2[1]]
+        #                     ]
+        #                 )
+        # if cluster_edge[0] == bidir_path[-1]:
+        #     # add bidir_path <- cluster_edge[1] to collider_paths[cluster_edge[1]]
+        #     if cluster_edge[1] not in bidir_path:
+        #         self.collider_paths[cluster_edge[1]].append(
+        #             [bidir_path + [cluster_edge[1]]]
+        #         )
+        #         # paths of nature -> bidir_paths <- are already all added by the above logic
+
+        # Then find all ancestors for every cluster
+        self.cluster_ancestors = {}
+        for c_name in self.cluster_mapping.keys():
+            # will be removed later, for convenient construction
+            self.cluster_ancestors[c_name] = [c_name]
+        for i in range(len(self.cluster_mapping.keys()) - 1):
+            for c_name in self.cluster_mapping.keys():
+                for ancestor_name in self.cluster_ancestors[c_name]:
+                    for cluster_edge in self.cluster_edges:
+                        if cluster_edge[1] == ancestor_name:
+                            if (
+                                cluster_edge[0]
+                                not in self.cluster_ancestors[c_name]
+                            ):
+                                self.cluster_ancestors[c_name].append(
+                                    cluster_edge[0]
+                                )
+        for c_name in self.cluster_mapping.keys():
+            self.cluster_ancestors[c_name] = self.cluster_ancestors[c_name][1:]
+
+        # For collider paths with 3 ore more clusters, check for inducing paths
+        for c_name in self.cluster_mapping.keys():
+            for collider_path in self.collider_paths[c_name]:
+                if len(collider_path) >= 3:
+                    inducing_path = True
+                    for i in range(1, len(collider_path)):
+                        # Check if there is an inducing path
+                        start_cluster_name = collider_path[0]
+                        end_cluster_name = collider_path[-1]
+                        c_i_name = collider_path[i]
+                        # c_i_cluster = self.get_node_by_name(
+                        #     c_i_name, cg=self.cluster_graph
+                        # )
+                        # start_cluster = self.get_node_by_name(
+                        #     start_cluster_name, cg=self.cluster_graph
+                        # )
+                        # end_cluster = self.get_node_by_name(
+                        #     end_cluster_name, cg=self.cluster_graph
+                        # )
+                        if not (
+                            start_cluster_name
+                            in self.cluster_ancestors[c_i_name]
+                        ):
+                            if not (
+                                end_cluster_name
+                                in self.cluster_ancestors[c_i_name]
+                            ):
+                                inducing_path = False
+                    if inducing_path == False:
+                        print(
+                            f"No inducing path between {start_cluster_name} and {end_cluster_name}"
+                        )
+                    if inducing_path == True:
+                        print(
+                            f"Inducing path between {start_cluster_name} and {end_cluster_name}"
+                        )
+                        # Add the edge between the clusters
+                        if (
+                            start_cluster_name
+                            in self.cluster_ancestors[end_cluster_name]
+                        ):
+                            # add edge start_cluster_name -> end_cluster_name
+                            for node1_name in self.cluster_mapping[
+                                start_cluster_name
+                            ]:
+                                for node2_name in self.cluster_mapping[
+                                    end_cluster_name
+                                ]:
+                                    node1 = self.get_node_by_name(
+                                        node1_name, cg=self.cg
+                                    )
+                                    node2 = self.get_node_by_name(
+                                        node2_name, cg=self.cg
+                                    )
+                                    # self.cg.G.add_directed_edge(node1, node2)
+                                    i = self.cg.G.node_map[node1]
+                                    j = self.cg.G.node_map[node2]
+                                    self.cg.G.graph[j, i] = 1
+                                    self.cg.G.graph[i, j] = -1
+                                    # self.cg.G.adjust_dpath(i, j)
+
+                        if (
+                            end_cluster_name
+                            in self.cluster_ancestors[start_cluster_name]
+                        ):
+                            # add edge start_cluster_name <- end_cluster_name
+                            for node1_name in self.cluster_mapping[
+                                start_cluster_name
+                            ]:
+                                for node2_name in self.cluster_mapping[
+                                    end_cluster_name
+                                ]:
+                                    node1 = self.get_node_by_name(
+                                        node1_name, cg=self.cg
+                                    )
+                                    node2 = self.get_node_by_name(
+                                        node2_name, cg=self.cg
+                                    )
+                                    # self.cg.G.add_directed_edge(node2, node1)
+                                    i = self.cg.G.node_map[node1]
+                                    j = self.cg.G.node_map[node2]
+                                    self.cg.G.graph[j, i] = -1
+                                    self.cg.G.graph[i, j] = 1
+                                # self.cg.G.adjust_dpath(i, j)
+                        if (
+                            start_cluster_name
+                            not in self.cluster_ancestors[end_cluster_name]
+                        ) and (
+                            end_cluster_name
+                            not in self.cluster_ancestors[start_cluster_name]
+                        ):
+                            # add edge start_cluster_name <-> end_cluster_name
+                            for node1_name in self.cluster_mapping[
+                                start_cluster_name
+                            ]:
+                                for node2_name in self.cluster_mapping[
+                                    end_cluster_name
+                                ]:
+                                    node1 = self.get_node_by_name(
+                                        node1_name, cg=self.cg
+                                    )
+                                    node2 = self.get_node_by_name(
+                                        node2_name, cg=self.cg
+                                    )
+                                    i = self.cg.G.node_map[node1]
+                                    j = self.cg.G.node_map[node2]
+                                    self.cg.G.graph[j, i] = 1
+                                    self.cg.G.graph[i, j] = 1
 
     def cdag_to_mpdag(self) -> CausalGraph:
         """
@@ -279,15 +499,15 @@ class ClusterDAG:
                     c2_name,
                     c1_name,
                 ) not in self.cluster_edges:
-                    self.cg.G.remove_edge(edge)
+                    self.remove_edge(edge)
                 if (c1_name, c2_name) in self.cluster_edges:
-                    self.cg.G.remove_edge(edge)
+                    self.remove_edge(edge)
                     self.cg.G.add_directed_edge(
                         edge.get_node1(), edge.get_node2()
                     )
                     flag = "points_right"
                 if (c2_name, c1_name) in self.cluster_edges:
-                    self.cg.G.remove_edge(edge)
+                    self.remove_edge(edge)
                     self.cg.G.add_directed_edge(
                         edge.get_node2(), edge.get_node1()
                     )
@@ -296,7 +516,7 @@ class ClusterDAG:
                 # if ((c2_name, c1_name) in self.cluster_bidirected_edges) or (
                 #     (c1_name, c2_name) in self.cluster_bidirected_edges
                 # ):
-                #     self.cg.G.remove_edge(edge)
+                #     self.remove_edge(edge)
                 #     if flag is None:
                 #         # add edge cluster1 <-> cluster2
                 #         i = self.cg.G.node_map[edge.get_node1()]

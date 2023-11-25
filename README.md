@@ -6,28 +6,38 @@ I use the novel C-DAG (https://arxiv.org/abs/2202.12263) framework as background
 
 Find my work in progress thesis at https://sharelatex.tum.de/read/npjkjggtqffh
 
-Installation: 
+Installation (requires Python 3.10): 
 
-Clone the repository, create a  virtual environment
+Clone the repository in a folder of your choice:
+```
+git clone https://github.com/JanMarcoRuizdeVargas/clustercausal.git
+```
+
+Change directory to the repository:
+```
+cd .\clustercausal\
+```
+
+Create a  virtual environment:
 ```
 python -m venv env
 ```
 
-activate the virtual environment
+Activate the virtual environment:
 ```
-env\Scripts\activate
+.\env\Scripts\activate
 ```
 
-and install the requirements
+Install the requirements:
 ```
 pip install -r requirements.txt
 ```
 
 Usage: 
 
-For  custom graphs see Cluster_PC_example.ipynb
+For  custom graphs see Cluster_PC_example.ipynb. 
 
-For simulation studies and evaluation see Cluster_PC_simulation_gridsearch.ipynb and Cluster_PC_simulation_mass_simulation.ipynb
+For simulation studies and evaluation see Cluster_PC_simulation_gridsearch.ipynb and Cluster_PC_simulation_mass_simulation.ipynb. 
 
 Tests:    
 
