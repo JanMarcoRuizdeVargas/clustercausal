@@ -9,15 +9,15 @@ discovery_alg : ['ClusterPC']
 runs_per_configuration: 1
 
 # any integer between 2 and 50
-n_nodes: [10], [20], [30], [40], [50]
+n_nodes: [10, 20, 30, 40, 50]
 
 # will not be exactly graph edges due to gcastle dag generator, might be less edges
-n_edges: [10, 20] [20, 30], [30, 50], [40, 70], [50, 80]
+n_edges: [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
 
 # For more information see gcastle documentation
 dag_method: ['erdos_renyi', 'scale_free', 'hierarchical']
 
-n_clusters: [4, 7]
+n_clusters: [1,2,3,4,5,6,7]
 
 weight_range: 
   - [-1,2]
