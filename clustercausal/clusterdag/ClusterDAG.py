@@ -295,13 +295,13 @@ class ClusterDAG:
                 #         bidir_path + [c_edge_1[1]]
                 #     )
                 for c_edge_2 in self.cluster_edges:
-                    if c_edge_2[0] == bidir_path[-1]:
-                        if c_edge_2[1] not in [c_edge_1[0]] + bidir_path:
+                    if c_edge_2[1] == bidir_path[-1]:
+                        if c_edge_2[0] not in [c_edge_1[0]] + bidir_path:
                             if [c_edge_1[0]] + bidir_path + [
-                                c_edge_2[1]
+                                c_edge_2[0]
                             ] not in self.collider_paths[c_edge_1[0]]:
                                 self.collider_paths[c_edge_1[0]].append(
-                                    [c_edge_1[0]] + bidir_path + [c_edge_2[1]]
+                                    [c_edge_1[0]] + bidir_path + [c_edge_2[0]]
                                 )
                         # if c_edge_2[0] not in [bidir_path + [c_edge_1[1]]]:
                         #     self.collider_paths[c_edge_2[0]].append(
@@ -440,6 +440,73 @@ class ClusterDAG:
                                     self.cg.G.graph[i, j] = 1
 
         return self.cg
+
+    def reorient_all_with_cdag(self, cg):
+        """
+        Reorients all edges in the given CausalGraph cg
+        according to the CDAG
+        """
+        ori_edges = cg.G.get_graph_edges()
+        for ori_edge in ori_edges:
+            node1 = ori_edge.get_node1()
+            node2 = ori_edge.get_node2()
+            node1_name = node1.get_name()
+            node2_name = node2.get_name()
+            c1_name = self.find_key(
+                dictionary=self.cluster_mapping, value=node1_name
+            )
+            c2_name = self.find_key(
+                dictionary=self.cluster_mapping, value=node2_name
+            )
+            if c1_name == c2_name:
+                # Make edge o-o
+                cg.G.remove_edge(ori_edge)
+                ori_edge.set_endpoint1(Endpoint.CIRCLE.value)
+                ori_edge.set_endpoint2(Endpoint.CIRCLE.value)
+                cg.G.add_edge(ori_edge)
+            if c1_name != c2_name:
+                if (c1_name, c2_name) in self.cluster_edges:
+                    if (c1_name, c2_name) in self.cluster_bidirected_edges or (
+                        c2_name,
+                        c1_name,
+                    ) in self.cluster_bidirected_edges:
+                        # Make edge o->
+                        cg.G.remove_edge(ori_edge)
+                        ori_edge.set_endpoint1(Endpoint.CIRCLE.value)
+                        ori_edge.set_endpoint2(Endpoint.ARROW.value)
+                        cg.G.add_edge(ori_edge)
+                    else:
+                        # Make edge ->
+                        cg.G.remove_edge(ori_edge)
+                        ori_edge.set_endpoint1(Endpoint.TAIL.value)
+                        ori_edge.set_endpoint2(Endpoint.ARROW.value)
+                        cg.G.add_edge(ori_edge)
+                if (c2_name, c1_name) in self.cluster_edges:
+                    if (c1_name, c2_name) in self.cluster_bidirected_edges or (
+                        c2_name,
+                        c1_name,
+                    ) in self.cluster_bidirected_edges:
+                        # Make edge <-o
+                        cg.G.remove_edge(ori_edge)
+                        ori_edge.set_endpoint1(Endpoint.ARROW.value)
+                        ori_edge.set_endpoint2(Endpoint.CIRCLE.value)
+                        cg.G.add_edge(ori_edge)
+                    else:
+                        # Make edge <-
+                        cg.G.remove_edge(ori_edge)
+                        ori_edge.set_endpoint1(Endpoint.ARROW.value)
+                        ori_edge.set_endpoint2(Endpoint.TAIL.value)
+                        cg.G.add_edge(ori_edge)
+                else:
+                    if (c1_name, c2_name) in self.cluster_bidirected_edges or (
+                        c2_name,
+                        c1_name,
+                    ) in self.cluster_bidirected_edges:
+                        # Make edge <->
+                        cg.G.remove_edge(ori_edge)
+                        ori_edge.set_endpoint1(Endpoint.ARROW.value)
+                        ori_edge.set_endpoint2(Endpoint.ARROW.value)
+                        cg.G.add_edge(ori_edge)
 
     def cdag_to_mpdag(self) -> CausalGraph:
         """

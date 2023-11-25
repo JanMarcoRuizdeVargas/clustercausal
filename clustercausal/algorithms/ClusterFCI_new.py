@@ -58,7 +58,8 @@ class ClusterFCI:
         self.show_progress = show_progress
         self.kwargs = kwargs
         # First bidirected edges are ignored, it will be updated later
-        self.cdag.cdag_to_mpdag()
+        # self.cdag.cdag_to_mpdag()
+        self.cdag.cdag_to_circle_mpdag()
         self.cdag.get_cluster_topological_ordering()  # Get topological ordering of CDAG
 
         # Set independence test for cluster_phase
@@ -124,8 +125,9 @@ class ClusterFCI:
 
         # reorient remaining edges according to bidirected edges
         # analog to reorientAllWith(graph, Endpoint.CIRCLE)
-        self.cdag.cdag_to_circle_mpdag(cg=self.cdag.cg)
-        # reorientAllWith(self.cdag.cg.G, Endpoint.CIRCLE)
+        # self.cdag.cdag_to_circle_mpdag(cg=self.cdag.cg)
+        # self.cdag.reorient_all_with_cdag(cg=self.cdag.cg)
+        reorientAllWith(self.cdag.cg.G, Endpoint.CIRCLE)
 
         self.rule0(
             self.cdag.cg.G,
@@ -143,8 +145,9 @@ class ClusterFCI:
         )
 
         # # analog to reorientAllWith(graph, Endpoint.CIRCLE), but keeps arrows from C-DAG
-        self.cdag.cdag_to_circle_mpdag(cg=self.cdag.cg)
-        # # reorientAllWith(self.cdag.cg.G, Endpoint.CIRCLE)
+        # self.cdag.cdag_to_circle_mpdag(cg=self.cdag.cg)
+        # self.cdag.reorient_all_with_cdag(cg=self.cdag.cg)
+        reorientAllWith(self.cdag.cg.G, Endpoint.CIRCLE)
 
         self.rule0(
             self.cdag.cg.G,
