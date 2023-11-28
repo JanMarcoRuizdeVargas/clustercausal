@@ -124,6 +124,7 @@ class ClusterFCI:
 
         # reorient remaining edges according to bidirected edges
         # analog to reorientAllWith(graph, Endpoint.CIRCLE)
+        # self.cdag.cg = self.cdag.reorient_all_with_cdag(cg = self.cdag.cg)
         self.cdag.cdag_to_circle_mpdag(cg=self.cdag.cg)
         # reorientAllWith(self.cdag.cg.G, Endpoint.CIRCLE)
 
@@ -144,6 +145,7 @@ class ClusterFCI:
 
         # # analog to reorientAllWith(graph, Endpoint.CIRCLE), but keeps arrows from C-DAG
         self.cdag.cdag_to_circle_mpdag(cg=self.cdag.cg)
+        # self.cdag.cg = self.cdag.reorient_all_with_cdag(cg = self.cdag.cg)
         # # reorientAllWith(self.cdag.cg.G, Endpoint.CIRCLE)
 
         self.rule0(
