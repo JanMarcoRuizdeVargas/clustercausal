@@ -13,7 +13,7 @@ Clone the repository in a folder of your choice:
 git clone https://github.com/JanMarcoRuizdeVargas/clustercausal.git
 ```
 
-Certain foldernames in the notebooks or in clustercausal/experiments/run_gridsearch might have to be changed to adjust from Windows to macOS or Linux to work properly.
+Certain foldernames in the notebooks or in ```clustercausal/experiments/run_gridsearch.py``` might have to be changed to adjust from Windows to macOS or Linux to work properly.
 
  
 Change directory to the repository(Windows):
