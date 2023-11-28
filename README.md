@@ -14,21 +14,38 @@ git clone https://github.com/JanMarcoRuizdeVargas/clustercausal.git
 ```
 
 Change directory to the repository:
+Windows:
 ```
 cd .\clustercausal\
 ```
+macOS:
+```
+cd clustercausal
+```
 
 Create a  virtual environment:
+Windows:
 ```
 python -m venv env
 ```
+macOS
+```
+python3 -m venv env
+```
 
 Activate the virtual environment:
+Windows:
 ```
 .\env\Scripts\activate
 ```
+macOS:
+```
+source env/bin/activate
+```
 
-Install the requirements:
+(To deactivate the virtual environment after one is done, run ```deactivate``` for both Windows and macOS)
+
+Install the requirements (same for Windows and macOS):
 ```
 pip install -r requirements.txt
 ```
