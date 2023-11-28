@@ -9,4 +9,11 @@ clustercausal/experiments/results
 clustercausal/experiments/_results
 clustercausal/experiments/_results_storage
 clustercausal/experiments/archive_results
+clustercausal/__pycache__
+clustercausal/algorithms/__pycache__
+clustercausal/experiments/__pycache__
+clustercausal/clusterdag/__pycache__
+clustercausal/tests/__pycache__
+clustercausal/utils/__pycache__
+
 
