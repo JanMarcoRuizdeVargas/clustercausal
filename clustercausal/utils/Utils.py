@@ -35,6 +35,20 @@ def make_graph(node_names, parent_dict):
     return cg, W
 
 
+# def get_mag_from_dag(dag: CausalGraph, latents) -> CausalGraph:
+#     """
+#     Transforms the DAG to a MAG by adding edges
+#     between nodes connected via a latent variable
+#     Parameters
+#       - dag: CausalGraph
+#       - latents: list of latent variables to exlcue
+#     Returns
+#         - mag: CausalGraph
+#     ! Does not support introduction of inducing paths yet
+#     """
+#     pass
+
+
 def gaussian_data(W, sample_size, seed=42):
     """
     Arguments:

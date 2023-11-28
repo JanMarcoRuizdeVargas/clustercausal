@@ -20,6 +20,7 @@ from causallearn.graph.Endpoint import Endpoint
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
+
 class ClusterDAG:
     """
     Class for functionality regarding CDAGS
@@ -260,7 +261,7 @@ class ClusterDAG:
         self.bidir_paths = {}
         for c_name in self.cluster_mapping.keys():
             self.bidir_paths[c_name] = [[c_name]]
-        for i in range(len(self.cluster_mapping.keys()) - 2):
+        for i in range(len(self.cluster_mapping.keys()) + 1):
             # district_mapping[c_name] contains the bidirected
             # paths originating from c_name
             for c_name in self.cluster_mapping.keys():
@@ -289,19 +290,21 @@ class ClusterDAG:
                         self.collider_paths[c_edge_1[0]].append(
                             [c_edge_1[0]] + bidir_path
                         )
-                # if c_edge_1[1] not in bidir_path:
-                #     self.collider_paths[bidir_path[0]].append(
-                #         bidir_path + [c_edge_1[1]]
-                #     )
-                for c_edge_2 in self.cluster_edges:
-                    if c_edge_2[1] == bidir_path[-1]:
-                        if c_edge_2[0] not in [c_edge_1[0]] + bidir_path:
-                            if [c_edge_1[0]] + bidir_path + [
-                                c_edge_2[0]
-                            ] not in self.collider_paths[c_edge_1[0]]:
-                                self.collider_paths[c_edge_1[0]].append(
-                                    [c_edge_1[0]] + bidir_path + [c_edge_2[0]]
-                                )
+                    # if c_edge_1[1] not in bidir_path:
+                    #     self.collider_paths[bidir_path[0]].append(
+                    #         bidir_path + [c_edge_1[1]]
+                    #     )
+                    for c_edge_2 in self.cluster_edges:
+                        if c_edge_2[1] == bidir_path[-1]:
+                            if c_edge_2[0] not in [c_edge_1[0]] + bidir_path:
+                                if [c_edge_1[0]] + bidir_path + [
+                                    c_edge_2[0]
+                                ] not in self.collider_paths[c_edge_1[0]]:
+                                    self.collider_paths[c_edge_1[0]].append(
+                                        [c_edge_1[0]]
+                                        + bidir_path
+                                        + [c_edge_2[0]]
+                                    )
                         # if c_edge_2[0] not in [bidir_path + [c_edge_1[1]]]:
                         #     self.collider_paths[c_edge_2[0]].append(
                         #         [c_edge_2[0]] + bidir_path + [c_edge_1[1]]
@@ -440,7 +443,7 @@ class ClusterDAG:
 
         return self.cg
 
-    def reorient_all_with_cdag(self, cg) -> CausalGraph:
+    def reorient_cg_with_cdag(self) -> CausalGraph:
         """
         Reorients all edges in the given CausalGraph cg
         according to the CDAG
@@ -451,52 +454,66 @@ class ClusterDAG:
             for node1_name in self.cluster_mapping[c1_name]:
                 for node2_name in self.cluster_mapping[c1_name]:
                     if node1_name != node2_name:
-                        node1 = self.get_node_by_name(node1_name, cg=cg)
-                        node2 = self.get_node_by_name(node2_name, cg=cg)
-                        i = cg.G.node_map[node1]
-                        j = cg.G.node_map[node2]
-                        if self.cg.G.graph[i,j] != 0 and self.cg.G.graph[j,i] != 0:
+                        node1 = self.get_node_by_name(node1_name, cg=self.cg)
+                        node2 = self.get_node_by_name(node2_name, cg=self.cg)
+                        i = self.cg.G.node_map[node1]
+                        j = self.cg.G.node_map[node2]
+                        if (
+                            self.cg.G.graph[i, j] != 0
+                            and self.cg.G.graph[j, i] != 0
+                        ):
                             # If edge is not empty, add o-o
-                            cg.G.graph[i,j] = 2
-                            cg.G.graph[j,i] = 2
+                            self.cg.G.graph[i, j] = 2
+                            self.cg.G.graph[j, i] = 2
 
         for c1_name in self.cluster_mapping.keys():
             for c2_name in self.cluster_mapping.keys():
                 if c1_name != c2_name:
                     for node1_name in self.cluster_mapping[c1_name]:
                         for node2_name in self.cluster_mapping[c2_name]:
-                            node1 = self.get_node_by_name(node1_name, cg=cg)
-                            node2 = self.get_node_by_name(node2_name, cg=cg)
-                            i = cg.G.node_map[node1]
-                            j = cg.G.node_map[node2]
-                            if self.cg.G.graph[i,j] != 0 and self.cg.G.graph[j,i] != 0:
+                            node1 = self.get_node_by_name(
+                                node1_name, cg=self.cg
+                            )
+                            node2 = self.get_node_by_name(
+                                node2_name, cg=self.cg
+                            )
+                            i = self.cg.G.node_map[node1]
+                            j = self.cg.G.node_map[node2]
+                            if (
+                                self.cg.G.graph[i, j] != 0
+                                and self.cg.G.graph[j, i] != 0
+                            ):
                                 if (c1_name, c2_name) in self.cluster_edges:
-                                    if (c1_name, c2_name) in self.cluster_bidirected_edges or (
+                                    if (
+                                        c1_name,
+                                        c2_name,
+                                    ) in self.cluster_bidirected_edges or (
                                         c2_name,
                                         c1_name,
                                     ) in self.cluster_bidirected_edges:
                                         # Make edge o->
-                                        cg.G.graph[i,j] = 2
-                                        cg.G.graph[j,i] = 1
+                                        self.cg.G.graph[i, j] = 2
+                                        self.cg.G.graph[j, i] = 1
                                     else:
                                         # Make edge ->
-                                        cg.G.graph[i,j] = -1
-                                        cg.G.graph[j,i] = 1
+                                        self.cg.G.graph[i, j] = -1
+                                        self.cg.G.graph[j, i] = 1
                                 if (c2_name, c1_name) in self.cluster_edges:
-                                    if (c1_name, c2_name) in self.cluster_bidirected_edges or (
+                                    if (
+                                        c1_name,
+                                        c2_name,
+                                    ) in self.cluster_bidirected_edges or (
                                         c2_name,
                                         c1_name,
                                     ) in self.cluster_bidirected_edges:
                                         # Make edge <-o
-                                        cg.G.graph[i,j] = 1
-                                        cg.G.graph[j,i] = 2
+                                        self.cg.G.graph[i, j] = 1
+                                        self.cg.G.graph[j, i] = 2
                                     else:
                                         # Make edge <-
-                                        cg.G.graph[i,j] = 1
-                                        cg.G.graph[j,i] = -1
-        return cg
-                                    
-
+                                        self.cg.G.graph[i, j] = 1
+                                        self.cg.G.graph[j, i] = -1
+        return self.cg
 
         #                     edge = cg.G.get_edge(node1, node2)
         #                     if edge is not None:
@@ -522,9 +539,6 @@ class ClusterDAG:
         #             if edge is not None:
         #                 cluster_i_name = self.find_key(self.cluster_mapping, node_i.get_name())
         #                 cluster_j_name = self.find_key(self.cluster_mapping, node_j.get_name())
-
-
-
 
         # ###################################
         # ori_edges = cg.G.get_graph_edges()
