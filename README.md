@@ -33,6 +33,8 @@ Install the requirements:
 pip install -r requirements.txt
 ```
 
+To be able to calculate SID in the metrics one needs to install R (version 4.3.1 is recommended). 
+
 Usage: 
 
 For  custom graphs see Cluster_PC_example.ipynb. 
