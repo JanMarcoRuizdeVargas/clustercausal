@@ -53,7 +53,9 @@ Install the requirements (same for Windows and macOS):
 pip install -r requirements.txt
 ```
 
-To be able to calculate SID in the metrics one needs to install R (version 4.3.1 is recommended). 
+To be able to calculate SID in the metrics one needs to install R (version 4.3.1 is recommended). In addition, one needs to change ```os.environ[
+    "R_HOME"
+] = "C:\Program Files\R\R-4.3.1"``` in ```clustercausal/experiments/Evaluator.py``` to the path where R is installed.
 
 
 Usage: 
