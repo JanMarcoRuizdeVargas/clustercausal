@@ -13,6 +13,7 @@ Clone the repository in a folder of your choice:
 git clone https://github.com/JanMarcoRuizdeVargas/clustercausal.git
 ```
 
+
 Change directory to the repository:
 Windows:
 ```
@@ -23,15 +24,17 @@ macOS:
 cd clustercausal
 ```
 
+
 Create a  virtual environment:
 Windows:
 ```
 python -m venv env
 ```
-macOS
+macOS:
 ```
 python3 -m venv env
 ```
+
 
 Activate the virtual environment:
 Windows:
@@ -45,12 +48,14 @@ source env/bin/activate
 
 (To deactivate the virtual environment after one is done, run ```deactivate``` for both Windows and macOS)
 
+
 Install the requirements (same for Windows and macOS):
 ```
 pip install -r requirements.txt
 ```
 
 To be able to calculate SID in the metrics one needs to install R (version 4.3.1 is recommended). 
+
 
 Usage: 
 
