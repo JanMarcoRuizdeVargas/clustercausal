@@ -129,6 +129,17 @@ class ExperimentRunner:
         param_dict = dict(zip(param_names, params))
         # print(f"Running experiment with parameters: {param_dict}")
         # run simulation
+        if self.discovery_alg == ["ClusterPC"]:
+            self.run_pc_experiment(param_dict)
+        elif self.discovery_alg == ["ClusterFCI"]:
+            self.run_fci_experiment(param_dict)
+        else:
+            raise ValueError("discovery_alg must be either ClusterPC or ClusterFCI")
+        
+    def run_fci_experiment(self, param_dict):
+        pass
+
+    def run_pc_experiment(self, param_dict):
         simulation = Simulator(**param_dict)
         cluster_dag = simulation.run()
         # run causal discovery
