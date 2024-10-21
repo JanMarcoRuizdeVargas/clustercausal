@@ -136,8 +136,18 @@ class ExperimentRunner:
         else:
             raise ValueError("discovery_alg must be either ClusterPC or ClusterFCI")
         
-    def run_fci_experiment(self, param_dict):
-        pass
+    def run_fci_experiment(self, param_dict):       
+        simulation = Simulator(**param_dict)
+        # if simulation.cluster_method is not "dag":
+        #     raise ValueError("For FCI experiments, cluster_method must be 'dag'")
+        
+        # # increase nodes + edges to simulate latent variables
+        # # these will be cut out again later
+        # simulation.n_nodes = round(simulation.n_nodes * 1.5)
+        # simulation.n_edges = round(simulation.n_edges * 1.5)
+
+        cluster_admg = simulation.run_with_latents()
+
 
     def run_pc_experiment(self, param_dict):
         simulation = Simulator(**param_dict)

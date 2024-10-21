@@ -145,6 +145,54 @@ class Simulator:
         cluster_dag.data = data
         return cluster_dag
 
+    def run_with_latents(self, no_of_latent_vars = None) -> ClusterDAG:
+        """
+        Runs the simulator and generates a cluster_dag. 
+        Adds latent variables by adding extra ones and removing them. 
+        'Arguments':
+            cluster_method: 'dag'
+        Returns:
+            cluster_dag: a ClusterDAG object
+                with true_dag, data, cluster_graph, cluster_mapping attributes
+        """
+        if self.cluster_method != "dag":
+            raise ValueError("For latent var simulation, cluster_method must be 'dag'")
+        # increase nodes + edges by 50% to simulate latent variables, if no
+        # number of latent_variables was specified
+        if no_of_latent_vars is None:
+            self.n_nodes = round(self.n_nodes * 1.5)
+            self.n_edges = round(self.n_edges * 1.5)
+            
+        dag = self.true_dag
+        if self.n_clusters is None:
+            np.random.seed(self.seed)
+            self.n_clusters = np.random.randint(
+                low=2, high=int(np.ceil(self.n_nodes / 2)) + 1
+            )
+        if dag is None:
+            dag = self.generate_dag(
+                self.n_nodes,
+                self.n_edges,
+                self.dag_method,
+                self.weight_range,
+                self.seed,
+                self.node_names,
+            )
+        cluster_dag = self.generate_clustering(
+            dag, self.n_clusters, self.seed
+        )
+
+        data = self.generate_data(
+            cluster_dag.true_dag,
+            self.sample_size,
+            self.distribution_type,
+            self.scm_method,
+            self.noise_scale,
+        )
+        cluster_dag.data = data
+        
+        return cluster_dag
+
     @staticmethod
     def generate_dag(
         n_nodes, n_edges, dag_method, weight_range, seed, node_names=None
