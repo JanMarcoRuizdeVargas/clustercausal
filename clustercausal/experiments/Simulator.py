@@ -6,6 +6,7 @@ import networkx as nx
 
 from causallearn.graph.GraphClass import CausalGraph
 from causallearn.graph.Endpoint import Endpoint
+from causallearn.graph.Edge import Edge
 
 from castle.datasets.simulator import IIDSimulation, DAG
 
@@ -160,15 +161,13 @@ class Simulator:
         # increase nodes + edges by 50% to simulate latent variables, if no
         # number of latent_variables was specified
         if no_of_latent_vars is None:
-            self.n_nodes = round(self.n_nodes * 1.5)
-            self.n_edges = round(self.n_edges * 1.5)
+            no_of_latent_vars = round(self.n_nodes * 0.5)
+        ratio = no_of_latent_vars / self.n_nodes
+        self.n_nodes += no_of_latent_vars
+        self.n_edges += round(self.n_edges * ratio)
             
         dag = self.true_dag
-        if self.n_clusters is None:
-            np.random.seed(self.seed)
-            self.n_clusters = np.random.randint(
-                low=2, high=int(np.ceil(self.n_nodes / 2)) + 1
-            )
+
         if dag is None:
             dag = self.generate_dag(
                 self.n_nodes,
@@ -178,9 +177,6 @@ class Simulator:
                 self.seed,
                 self.node_names,
             )
-        cluster_dag = self.generate_clustering(
-            dag, self.n_clusters, self.seed
-        )
 
         data = self.generate_data(
             cluster_dag.true_dag,
@@ -190,7 +186,47 @@ class Simulator:
             self.noise_scale,
         )
         cluster_dag.data = data
-        
+
+        # Remove first 1/3 of nodes and add bidirected edges
+        for i in range(len(no_of_latent_vars)):
+            # Get children of node
+            node_i = ClusterDAG.get_key_by_value(dag.G.node_map, i)
+            children = dag.G.get_children(node_i) #list of Node objects
+            # Add bidirected edges between children
+            for node_a, node_b in itertools.combinations(children, 2):
+                # Check if an edge already exists between node_a, node_b
+                edge = dag.G.get_edge(node_a, node_b)
+                # Add bidirected edge if edge is none
+                if edge is None:
+                    dag.G.remove_edge(edge)
+                    new_edge = Edge(node_a, node_b, Endpoint.ARROW, Endpoint.ARROW)
+                    dag.G.add_edge(new_edge)
+                # If edge node_a -> node_b exists, change to -> and <->
+                if edge.get_endpoint1() == Endpoint.TAIL:
+                    dag.G.remove_edge(edge)
+                    new_edge = Edge(node_a, node_b, \
+                                    Endpoint.TAIL_AND_ARROW, Endpoint.ARROW_AND_ARROW)
+                    dag.G.add_edge(new_edge)
+                # If edge node_a <- node_b exists, change to <- and <->
+                if edge.get_endpoint1() == Endpoint.ARROW:
+                    dag.G.remove_edge(edge)
+                    new_edge = Edge(node_a, node_b, \
+                                    Endpoint.ARROW_AND_ARROW, Endpoint.TAIL_AND_ARROW)
+                    dag.G.add_edge(new_edge)
+            dag.G.remove_node(node_i)
+
+        # Remove first 1/3 of data
+        data = data[:, no_of_latent_vars:]
+
+        # Construct clustering
+        if self.n_clusters is None:
+            np.random.seed(self.seed)
+            self.n_clusters = np.random.randint(
+                low=2, high=int(np.ceil(self.n_nodes / 2)) + 1
+            )
+        cluster_dag = self.generate_clustering(
+            dag, self.n_clusters, self.seed
+        )
         return cluster_dag
 
     @staticmethod

@@ -119,16 +119,45 @@ class ExperimentRunner:
                     self.run_experiment(params)
 
     def run_experiment(self, params):
+            """
+            Run an experiment
+            """
+            param_names = list(
+                self.linear_config.keys()
+            )  # for names doesn't matter linear or nonlinear
+            param_dict = dict(zip(param_names, params))
+            # print(f"Running experiment with parameters: {param_dict}")
+            # run simulation
+            if self.discovery_alg == ["ClusterPC"]:
+                self.run_pc_experiment(param_dict)
+            elif self.discovery_alg == ["ClusterFCI"]:
+                self.run_fci_experiment(param_dict)
+
+    def run_fci_experiment(self, param_dict):
         """
-        Run an experiment
+        Run an experiment with FCI
+        """
+        pass
+        # Simulate DAG, remove nodes to get latent variables
+        simulation = Simulator(**param_dict)
+        cluster_dag = simulation.run_with_latents()
+
+        # Construct clustering
+
+        # Construct nx_graph
+
+        # Run C-FCI
+
+        # Run FCI
+
+        # Evaluate & save results
+
+    def run_pc_experiment(self, param_dict):
+        """
+        Run an experiment with PC
         # TODO add different independence tests
         """
-        param_names = list(
-            self.linear_config.keys()
-        )  # for names doesn't matter linear or nonlinear
-        param_dict = dict(zip(param_names, params))
-        # print(f"Running experiment with parameters: {param_dict}")
-        # run simulation
+         # run simulation
         simulation = Simulator(**param_dict)
         cluster_dag = simulation.run()
         # run causal discovery
