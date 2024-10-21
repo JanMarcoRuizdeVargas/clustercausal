@@ -16,7 +16,6 @@ from causallearn.graph.GeneralGraph import GeneralGraph
 from clustercausal.experiments.Simulator import Simulator
 from clustercausal.experiments.Evaluator import Evaluator
 from clustercausal.algorithms.ClusterPC import ClusterPC
-from clustercausal.algorithms.ClusterFCI import ClusterFCI
 from clustercausal.utils.Utils import *
 
 # os.environ[
@@ -130,39 +129,6 @@ class ExperimentRunner:
         param_dict = dict(zip(param_names, params))
         # print(f"Running experiment with parameters: {param_dict}")
         # run simulation
-        if self.discovery_alg == ["ClusterPC"]:
-            simulation, cluster_pc, cluster_dag, cluster_est_graph, base_est_graph = \
-                self.run_pc_experiment(param_dict)
-        elif self.discovery_alg == ["ClusterFCI"]:
-            simulation, cluster_fci, cluster_dag, cluster_est_graph, base_est_graph = \
-                self.run_fci_experiment(param_dict)
-        else:
-            raise ValueError("discovery_alg must be either ClusterPC or ClusterFCI")
-        # evaluate causal discovery and save results
-        self.evaluate(
-            simulation,
-            cluster_pc,
-            cluster_dag,
-            cluster_est_graph,
-            base_est_graph,
-            param_dict,
-        )
-        
-    def run_fci_experiment(self, param_dict):       
-        simulation = Simulator(**param_dict)
-        # if simulation.cluster_method is not "dag":
-        #     raise ValueError("For FCI experiments, cluster_method must be 'dag'")
-        
-        # # increase nodes + edges to simulate latent variables
-        # # these will be cut out again later
-        # simulation.n_nodes = round(simulation.n_nodes * 1.5)
-        # simulation.n_edges = round(simulation.n_edges * 1.5)
-
-        cluster_admg = simulation.run_with_latents()
-
-        return simulation, cluster_fci, cluster_dag, cluster_est_graph, base_est_graph
-
-    def run_pc_experiment(self, param_dict):
         simulation = Simulator(**param_dict)
         cluster_dag = simulation.run()
         # run causal discovery
@@ -187,10 +153,7 @@ class ExperimentRunner:
             show_progress=False,
             true_dag=nx_true_dag,
         )
-        return simulation, cluster_pc, cluster_dag, cluster_est_graph, base_est_graph
-
-    def evaluate(self, simulation, cluster_pc, cluster_dag, cluster_est_graph, base_est_graph, param_dict):
-        # evaluate causal discovery and save results
+        # evaluate causal discovery
         cluster_evaluation = Evaluator(
             truth=cluster_dag.true_dag.G, est=cluster_est_graph.G
         )
@@ -326,7 +289,6 @@ class ExperimentRunner:
             cluster_mapping=one_cluster_dag_mapping,
             cluster_edges=one_cluster_dag_edges,
         )
-        nx_true_dag = cluster_dag.true_dag.nx_graph
         one_cluster_pc = ClusterPC(
             cdag=one_cluster_cluster_dag,
             data=cluster_dag.data,
