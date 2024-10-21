@@ -150,6 +150,7 @@ class Simulator:
         """
         Runs the simulator and generates a cluster_dag. 
         Adds latent variables by adding extra ones and removing them. 
+        'dag' is not really a dag anymore, because of the latent variables.
         'Arguments':
             cluster_method: 'dag'
         Returns:
@@ -224,9 +225,14 @@ class Simulator:
             self.n_clusters = np.random.randint(
                 low=2, high=int(np.ceil(self.n_nodes / 2)) + 1
             )
-        cluster_dag = self.generate_clustering(
+        cluster_dag = self.generate_clustering_with_latents(
             dag, self.n_clusters, self.seed
         )
+        cluster_dag.data = data
+
+        #TODO: add edges due to inducing paths for true_dag
+
+
         return cluster_dag
 
     @staticmethod
@@ -608,5 +614,103 @@ class Simulator:
         cluster_dag = ClusterDAG(
             cluster_mapping, cluster_edges, node_names=node_names
         )
+        cluster_dag.true_dag = dag
+        return cluster_dag
+    
+    @staticmethod
+    def generate_clustering_with_latents(dag: CausalGraph, n_clusters, seed):
+        """
+        Generate an admissible (no cycles) clustering from dag. Supports latent
+        variables. 
+        Arguments:
+            dag: the causal graph
+            n_clusters: number of clusters in the cluster graph, if None then random
+            seed: seed for the random number generator
+        Output:
+            cluster_dag: a ClusterDAG object
+        Adjusts true_dag such that cluster_graph is admissible
+        """
+        
+        # Generate a cluster graph
+        n_nodes = dag.G.graph.shape[0]
+        np.random.seed(seed)
+        node_names = [node.get_name() for node in dag.G.get_nodes()]
+
+        # Get topological ordering of nodes (only directed edges necessary)
+        nx_helper_graph = nx.DiGraph()
+        edge_name_list = []
+        for edge in dag.G.get_graph_edges():
+            points_right = (edge.get_endpoint1() == Endpoint.TAIL) and (edge.get_endpoint2() == Endpoint.ARROW)
+            points_left = (edge.get_endpoint1() == Endpoint.ARROW) and (edge.get_endpoint2() == Endpoint.TAIL)
+            is_directed_edge = points_right or points_left
+            if is_directed_edge:
+                node1_name = edge.get_node1().get_name()
+                node2_name = edge.get_node2().get_name()
+                if points_right:
+                    edge_name_list.append((node1_name, node2_name))
+                if points_left:
+                    edge_name_list.append((node2_name, node1_name))
+        nx_helper_graph.add_edges_from(edge_name_list)
+        nx_helper_graph.add_nodes_from(
+            node_names
+        )  # ensure that all nodes are in the graph
+        topological_ordering = list(nx.topological_sort(nx_helper_graph))
+        # successively partition the topological ordering into clusters
+        # Each cluster gets at least one node
+        # Get cluster cutoffs by drawing without replacement from topological ordering
+        node_range = list(range(1, n_nodes))
+        cluster_cutoffs = sorted(
+            np.random.choice(node_range, size=n_clusters - 1, replace=False)
+        )
+        cluster_cutoffs.append(
+            n_nodes
+        ) # ensure that last cluster has all remaining nodes
+
+        cluster_mapping = {}
+        cluster_names = [f"C{i+1}" for i in range(n_clusters)]
+        j = 0
+        l = 0
+        u = cluster_cutoffs[0]
+        for cluster in cluster_names:
+            cluster_mapping[cluster] = []
+            for i in range(l, u):
+                cluster_mapping[cluster].append(topological_ordering[i])
+            l = u
+            if j < n_clusters - 1:
+                u = cluster_cutoffs[j + 1]
+                j += 1
+
+        # Cluster edges
+        cluster_edges = []
+        cluster_bidirected_edges = []
+        for edge in dag.G.get_graph_edges():
+            node1_name = edge.get_node1().get_name()
+            node2_name = edge.get_node2().get_name()
+            c1_name = ClusterDAG.find_key(cluster_mapping, node1_name)
+            c2_name = ClusterDAG.find_key(cluster_mapping, node2_name)
+            if c1_name != c2_name:
+                endpoint1 = edge.get_endpoint1()
+                endpoint2 = edge.get_endpoint2()
+                if endpoint1 == Endpoint.ARROW and endpoint2 == Endpoint.TAIL:
+                    if (c2_name, c1_name) not in cluster_edges:
+                        cluster_edges.append((c2_name, c1_name))
+                if endpoint1 == Endpoint.TAIL and endpoint2 == Endpoint.ARROW:
+                    if (c1_name, c2_name) not in cluster_edges:
+                        cluster_edges.append((c1_name, c2_name))
+                if endpoint1 == Endpoint.ARROW_AND_ARROW and endpoint2 == Endpoint.TAIL_AND_ARROW:
+                    if ((c1_name, c2_name) or (c2_name, c1_name)) not in cluster_bidirected_edges:
+                        cluster_bidirected_edges.append((c1_name, c2_name))
+                if endpoint1 == Endpoint.TAIL_AND_ARROW and endpoint2 == Endpoint.ARROW_AND_ARROW:
+                    if ((c1_name, c2_name) or (c2_name, c1_name)) not in cluster_bidirected_edges:
+                        cluster_bidirected_edges.append((c1_name, c2_name))
+                # if (endpoint1 == Endpoint.TAIL_AND_ARROW or endpoint1 == Endpoint.ARROW_AND_ARROW) \
+                #         and (endpoint2 == Endpoint.TAIL_AND_ARROW or endpoint2 == Endpoint.ARROW_AND_ARROW):
+                #     cluster_edges.append((c1_name, c2_name))
+                #     cluster_edges.append((c2_name, c1_name)) # Later for confounders
+        
+        cluster_dag = ClusterDAG(
+            cluster_mapping, cluster_edges, cluster_bidirected_edges, node_names=node_names
+        )
+
         cluster_dag.true_dag = dag
         return cluster_dag
