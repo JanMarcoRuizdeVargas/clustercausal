@@ -9,6 +9,7 @@ import pickle
 import networkx as nx
 
 from causallearn.search.ConstraintBased.PC import pc
+from causallearn.search.ConstraintBased.FCI import fci
 from causallearn.graph.GeneralGraph import GeneralGraph
 
 # from cdt.metrics import SID, SID_CPDAG, get_CPDAG
@@ -16,6 +17,7 @@ from causallearn.graph.GeneralGraph import GeneralGraph
 from clustercausal.experiments.Simulator import Simulator
 from clustercausal.experiments.Evaluator import Evaluator
 from clustercausal.algorithms.ClusterPC import ClusterPC
+from clustercausal.algorithms.ClusterFCI import ClusterFCI
 from clustercausal.utils.Utils import *
 
 # os.environ[
@@ -147,10 +149,30 @@ class ExperimentRunner:
         # Construct nx_graph
 
         # Run C-FCI
+        cluster_est_graph = ClusterFCI(
+            cdag=cluster_dag,
+            data=cluster_dag.data,
+            alpha=param_dict["alpha"],
+            verbose=False,
+            show_progress=False,
+        ).run()
 
         # Run FCI
+        base_est_graph = fci(
+            cluster_dag.data, 
+            alpha=param_dict["alpha"],
+            verbose=False,
+            show_progress=False,
+        )
+
 
         # Evaluate & save results
+        cluster_evaluation = Evaluator(
+            truth=cluster_dag.true_mag.G, est=cluster_est_graph.G
+        )
+
+        # Refactor the Evaluator into its own function and call it here
+        # TODO
 
     def run_pc_experiment(self, param_dict):
         """

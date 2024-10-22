@@ -255,7 +255,7 @@ class Simulator:
         cluster_dag.data = data
 
         #TODO: add edges due to inducing paths for true_dag
-
+        cluster_dag.true_mag = self.get_mag(cluster_dag.true_dag)
 
         return cluster_dag
 
@@ -772,3 +772,70 @@ class Simulator:
         )  # ensure that all nodes are in the graph
         topological_ordering = list(nx.topological_sort(nx_helper_graph))
         return topological_ordering
+    
+    @staticmethod
+    def get_mag(dag: CausalGraph) -> CausalGraph:
+        """
+        Finds inducing paths and adds edges to make it a maximal ancestral graph. 
+        This graph serves as ground truth for causal discovery. 
+        """
+        ###     Find inducing paths      ###
+
+        # First find all bidirected paths 
+        bidirected_paths = {}
+        for node in dag.G.nodes:
+            bidirected_paths[node] = [[node]]
+        for i in range(len(dag.G.nodes) + 1):
+            for node in dag.G.nodes:
+                for bidir_path in bidirected_paths[node]:
+                    if len(bidir_path) == i + 1:
+                        continue
+                    last_node = bidir_path[-1]
+                    edges = dag.G.get_node_edges(last_node)
+                    for edge in edges:
+                        if Simulator.edge_is_bidirected(edge):
+                            next_node = edge.get_node2()
+                            if next_node == last_node:
+                                # Check that edge wasn't flipped by causallearn
+                                next_node = edge.get_node1()
+                            bidirected_paths[node].append(bidir_path + [next_node])
+
+        # Second find all collider paths
+
+        # Third find all ancestors for every cluster
+
+        # Fourth for collider paths with 3 or more clusters, 
+        # check for inducing paths and add edge if found
+
+
+        # Remove almost directed cycles, <-> to ->
+        for node in dag.G.nodes:
+            ancestors = []
+            dag.G.collect_ancestors(node, ancestors)
+            # Check if node <-> ancestor
+            for ancestor in ancestors:
+                edge = dag.G.get_edge(ancestor, node)
+                if edge: # edge is either -> and <-> or ->
+                    if edge.get_endpoint1() == Endpoint.TAIL_AND_ARROW and \
+                        edge.get_endpoint2() == Endpoint.ARROW_AND_ARROW:
+                        i = dag.G.node_map[ancestor]
+                        j = dag.G.node_map[node]
+                        # Remove edge and set to ->
+                        dag.G.remove_edge(edge)
+                        dag.G.graph[i, j] = Endpoint.TAIL.value
+                        dag.G.graph[j, i] = Endpoint.ARROW.value
+
+        return mag
+    
+    @staticmethod
+    def edge_is_bidirected(edge: Edge) -> bool:
+        """
+        Checks if edge is bidirected, i.e. <-> or <-> and ->/ <-. 
+        """
+        if edge.get_endpoint1() == Endpoint.ARROW and edge.get_endpoint2() == Endpoint.ARROW:
+            return True
+        if edge.get_endpoint1() == Endpoint.TAIL_AND_ARROW and edge.get_endpoint2() == Endpoint.ARROW_AND_ARROW:
+            return True
+        if edge.get_endopint1() == Endpoint.ARROW_AND_ARROW and edge.get_endpoint2() == Endpoint.TAIL_AND_ARROW:
+            return True
+        return False
