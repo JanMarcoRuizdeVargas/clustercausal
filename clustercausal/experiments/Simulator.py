@@ -159,10 +159,10 @@ class Simulator:
         """
         if self.cluster_method != "dag":
             raise ValueError("For latent var simulation, cluster_method must be 'dag'")
-        # increase nodes + edges by 50% to simulate latent variables, if no
+        # increase nodes + edges by 20% to simulate latent variables, if no
         # number of latent_variables was specified
         if no_of_latent_vars is None:
-            no_of_latent_vars = round(self.n_nodes * 0.5)
+            no_of_latent_vars = round(self.n_nodes * 0.2)
         ratio = no_of_latent_vars / self.n_nodes
         self.n_nodes += no_of_latent_vars
         self.n_edges += round(self.n_edges * ratio)
@@ -180,41 +180,65 @@ class Simulator:
             )
 
         data = self.generate_data(
-            cluster_dag.true_dag,
+            dag,
             self.sample_size,
             self.distribution_type,
             self.scm_method,
             self.noise_scale,
         )
-        cluster_dag.data = data
-
+        # dag.draw_pydot_graph()
         # Remove first 1/3 of nodes and add bidirected edges
-        for i in range(len(no_of_latent_vars)):
+        remove_nodes = []
+        topological_ordering = self.get_topological_ordering(dag)
+        for i in range(no_of_latent_vars):
             # Get children of node
-            node_i = ClusterDAG.get_key_by_value(dag.G.node_map, i)
+            # node_i = ClusterDAG.get_key_by_value(dag.G.node_map, i)
+            node_i = ClusterDAG.get_node_by_name(topological_ordering[i], dag)
             children = dag.G.get_children(node_i) #list of Node objects
             # Add bidirected edges between children
             for node_a, node_b in itertools.combinations(children, 2):
                 # Check if an edge already exists between node_a, node_b
                 edge = dag.G.get_edge(node_a, node_b)
+                a = dag.G.node_map[node_a]
+                b = dag.G.node_map[node_b]
+                # if edge was pointing left, causallearn flips it..
+                # so we flip a and b too
+                if (edge is not None) and (edge.get_node1() != node_a) and edge.get_node2() != node_b:
+                    a, b = b, a
                 # Add bidirected edge if edge is none
                 if edge is None:
-                    dag.G.remove_edge(edge)
-                    new_edge = Edge(node_a, node_b, Endpoint.ARROW, Endpoint.ARROW)
-                    dag.G.add_edge(new_edge)
+                    # edge = Edge(node_a, node_b, Endpoint.ARROW, Endpoint.ARROW)
+                    # edge.set_endpoint1(Endpoint.ARROW)
+                    # edge.set_endpoint2(Endpoint.ARROW)
+                    # add edge
+                    dag.G.graph[a, b] = Endpoint.ARROW.value
+                    dag.G.graph[b, a] = Endpoint.ARROW.value
+                    # dag.G.add_edge(edge)
                 # If edge node_a -> node_b exists, change to -> and <->
-                if edge.get_endpoint1() == Endpoint.TAIL:
+                elif edge.get_endpoint1() == Endpoint.TAIL:
                     dag.G.remove_edge(edge)
-                    new_edge = Edge(node_a, node_b, \
-                                    Endpoint.TAIL_AND_ARROW, Endpoint.ARROW_AND_ARROW)
-                    dag.G.add_edge(new_edge)
+                    # new_edge = Edge(node_a, node_b, \
+                                    # Endpoint.TAIL_AND_ARROW, Endpoint.ARROW_AND_ARROW)
+                    # edge.set_endpoint1(Endpoint.TAIL_AND_ARROW)
+                    # edge.set_endpoint2(Endpoint.ARROW_AND_ARROW)
+                    # dag.G.add_edge(edge)
+                    dag.G.graph[a, b] = Endpoint.TAIL_AND_ARROW.value
+                    dag.G.graph[b, a] = Endpoint.ARROW_AND_ARROW.value
                 # If edge node_a <- node_b exists, change to <- and <->
-                if edge.get_endpoint1() == Endpoint.ARROW:
+                elif edge.get_endpoint1() == Endpoint.ARROW:
                     dag.G.remove_edge(edge)
-                    new_edge = Edge(node_a, node_b, \
-                                    Endpoint.ARROW_AND_ARROW, Endpoint.TAIL_AND_ARROW)
-                    dag.G.add_edge(new_edge)
-            dag.G.remove_node(node_i)
+                    # edge.set_endpoint1(Endpoint.ARROW_AND_ARROW)
+                    # edge.set_endpoint2(Endpoint.TAIL_AND_ARROW)
+                    # new_edge = Edge(node_a, node_b, \
+                    #                 Endpoint.ARROW_AND_ARROW, Endpoint.TAIL_AND_ARROW)
+                    # dag.G.add_edge(edge)
+                    dag.G.graph[a, b] = Endpoint.ARROW_AND_ARROW.value
+                    dag.G.graph[b, a] = Endpoint.TAIL_AND_ARROW.value
+            remove_nodes.append(node_i)
+
+        # Remove nodes
+        for node in remove_nodes:
+            dag.G.remove_node(node)
 
         # Remove first 1/3 of data
         data = data[:, no_of_latent_vars:]
@@ -654,6 +678,10 @@ class Simulator:
         nx_helper_graph.add_nodes_from(
             node_names
         )  # ensure that all nodes are in the graph
+        import matplotlib.pyplot as plt
+        # nx.draw(nx_helper_graph, with_labels=True)
+        # nx.draw_networkx(nx_helper_graph, with_labels=True, arrowsize = 60, node_size = 7000, font_size = 50)
+        # plt.show()
         topological_ordering = list(nx.topological_sort(nx_helper_graph))
         # successively partition the topological ordering into clusters
         # Each cluster gets at least one node
@@ -691,22 +719,30 @@ class Simulator:
             if c1_name != c2_name:
                 endpoint1 = edge.get_endpoint1()
                 endpoint2 = edge.get_endpoint2()
+                # Add edge <-
                 if endpoint1 == Endpoint.ARROW and endpoint2 == Endpoint.TAIL:
                     if (c2_name, c1_name) not in cluster_edges:
                         cluster_edges.append((c2_name, c1_name))
+                # Add edge ->
                 if endpoint1 == Endpoint.TAIL and endpoint2 == Endpoint.ARROW:
                     if (c1_name, c2_name) not in cluster_edges:
                         cluster_edges.append((c1_name, c2_name))
+                # Add edges <-> and <-
                 if endpoint1 == Endpoint.ARROW_AND_ARROW and endpoint2 == Endpoint.TAIL_AND_ARROW:
                     if ((c1_name, c2_name) or (c2_name, c1_name)) not in cluster_bidirected_edges:
                         cluster_bidirected_edges.append((c1_name, c2_name))
+                    if (c2_name, c1_name) not in cluster_edges:
+                        cluster_edges.append((c2_name, c1_name))
+                # Add edges <-> and ->
                 if endpoint1 == Endpoint.TAIL_AND_ARROW and endpoint2 == Endpoint.ARROW_AND_ARROW:
                     if ((c1_name, c2_name) or (c2_name, c1_name)) not in cluster_bidirected_edges:
                         cluster_bidirected_edges.append((c1_name, c2_name))
-                # if (endpoint1 == Endpoint.TAIL_AND_ARROW or endpoint1 == Endpoint.ARROW_AND_ARROW) \
-                #         and (endpoint2 == Endpoint.TAIL_AND_ARROW or endpoint2 == Endpoint.ARROW_AND_ARROW):
-                #     cluster_edges.append((c1_name, c2_name))
-                #     cluster_edges.append((c2_name, c1_name)) # Later for confounders
+                    if (c1_name, c2_name) not in cluster_edges:
+                        cluster_edges.append((c1_name, c2_name))
+                # Add edge <->
+                if endpoint1 == Endpoint.ARROW and endpoint2 == Endpoint.ARROW:
+                    if (c1_name, c2_name) not in cluster_bidirected_edges:
+                        cluster_bidirected_edges.append((c1_name, c2_name))
         
         cluster_dag = ClusterDAG(
             cluster_mapping, cluster_edges, cluster_bidirected_edges, node_names=node_names
@@ -714,3 +750,25 @@ class Simulator:
 
         cluster_dag.true_dag = dag
         return cluster_dag
+    
+    @staticmethod
+    def get_topological_ordering(dag: CausalGraph):
+        """
+        Returns topological ordering of nodes from 'dag'. 
+        Returns:
+            - topological_ordering: list of node names in topological order
+        """
+        nx_helper_graph = nx.DiGraph()
+        node_names = [node.get_name() for node in dag.G.nodes]
+
+        edge_name_list = []
+        for edge in dag.G.get_graph_edges():
+            node1_name = edge.get_node1().get_name()
+            node2_name = edge.get_node2().get_name()
+            edge_name_list.append((node1_name, node2_name))
+        nx_helper_graph.add_edges_from(edge_name_list)
+        nx_helper_graph.add_nodes_from(
+            node_names
+        )  # ensure that all nodes are in the graph
+        topological_ordering = list(nx.topological_sort(nx_helper_graph))
+        return topological_ordering
