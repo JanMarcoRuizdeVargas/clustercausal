@@ -3,10 +3,14 @@ import castle
 import numpy as np
 import itertools
 import networkx as nx
+import copy
+
+from typing import List, Dict, Tuple
 
 from causallearn.graph.GraphClass import CausalGraph
 from causallearn.graph.Endpoint import Endpoint
 from causallearn.graph.Edge import Edge
+from causallearn.graph.Node import Node
 
 from castle.datasets.simulator import IIDSimulation, DAG
 
@@ -254,7 +258,7 @@ class Simulator:
         )
         cluster_dag.data = data
 
-        #TODO: add edges due to inducing paths for true_dag
+        # Get MAG for evaluation
         cluster_dag.true_mag = self.get_mag(cluster_dag.true_dag)
 
         return cluster_dag
@@ -779,19 +783,20 @@ class Simulator:
         Finds inducing paths and adds edges to make it a maximal ancestral graph. 
         This graph serves as ground truth for causal discovery. 
         """
+        mag = copy.deepcopy(dag)
         ###     Find inducing paths      ###
-
+        
         # First find all bidirected paths 
         bidirected_paths = {}
-        for node in dag.G.nodes:
+        for node in mag.G.nodes:
             bidirected_paths[node] = [[node]]
-        for i in range(len(dag.G.nodes) + 1):
-            for node in dag.G.nodes:
+        for i in range(len(mag.G.nodes) + 1):
+            for node in mag.G.nodes:
                 for bidir_path in bidirected_paths[node]:
-                    if len(bidir_path) == i + 1:
+                    if len(bidir_path) != i + 1:
                         continue
                     last_node = bidir_path[-1]
-                    edges = dag.G.get_node_edges(last_node)
+                    edges = mag.G.get_node_edges(last_node)
                     for edge in edges:
                         if Simulator.edge_is_bidirected(edge):
                             next_node = edge.get_node2()
@@ -801,30 +806,78 @@ class Simulator:
                             bidirected_paths[node].append(bidir_path + [next_node])
 
         # Second find all collider paths
+        collider_paths = copy.deepcopy(bidirected_paths)
+        for node in bidirected_paths.keys():
+            parents = mag.G.get_parents(node)
+            for bidir_path in bidirected_paths[node]:
+                for parent in parents:
+                    if parent not in bidir_path:
+                        collider_paths[node].append([parent] + bidir_path)
+                last_node = bidir_path[-1]
+                children = mag.G.get_children(last_node)
+                for child in children:
+                    if child not in bidir_path:
+                        collider_paths[node].append(bidir_path + [child])
 
-        # Third find all ancestors for every cluster
+        # Third find all ancestors for every node
+        ancestors_dict = {}
+        for node in mag.G.nodes:
+            ancestors: List[Node] = []
+            mag.G.collect_ancestors(node, ancestors)
+            ancestors_dict[node] = ancestors
 
         # Fourth for collider paths with 3 or more clusters, 
         # check for inducing paths and add edge if found
-
+        for node in collider_paths.keys():
+            for collider_path in collider_paths[node]:
+                inducing_path = True
+                if len(collider_path) < 3:
+                    continue
+                start_node = collider_path[0]
+                end_node = collider_path[-1]
+                for coll_node in collider_path[1:-1]:
+                    if (coll_node in ancestors_dict[start_node]) or \
+                        (coll_node in ancestors_dict[end_node]):
+                        pass 
+                    else:
+                        inducing_path = False
+                        break
+                # If we're here, we have an inducing path
+                inducing_path_names = [node.get_name() for node in collider_path]
+                print(f"Inducing path found: {inducing_path_names}")
+                # Have to add ->, <- or <-> between
+                # start_node and end_node, depending on the ancestorship
+                i = mag.G.node_map[start_node]
+                j = mag.G.node_map[end_node]
+                if start_node in ancestors_dict[end_node]:
+                    # Add edge start_node -> end_node
+                    mag.G.graph[i, j] = Endpoint.TAIL.value
+                    mag.G.graph[j, i] = Endpoint.ARROW.value
+                elif end_node in ancestors_dict[start_node]:
+                    # Add edge start_node <- end_node
+                    mag.G.graph[i, j] = Endpoint.ARROW.value
+                    mag.G.graph[i, j] = Endpoint.TAIL.value
+                else:
+                    # Add edge start_node <-> end_node
+                    mag.G.graph[i, j] = Endpoint.ARROW.value
+                    mag.G.graph[j, i] = Endpoint.ARROW.value
 
         # Remove almost directed cycles, <-> to ->
-        for node in dag.G.nodes:
-            ancestors = []
-            dag.G.collect_ancestors(node, ancestors)
+        for node in mag.G.nodes:
+            ancestors: List[Node] = []
+            mag.G.collect_ancestors(node, ancestors)
             # Check if node <-> ancestor
             for ancestor in ancestors:
-                edge = dag.G.get_edge(ancestor, node)
+                edge = mag.G.get_edge(ancestor, node)
                 if edge: # edge is either -> and <-> or ->
                     if edge.get_endpoint1() == Endpoint.TAIL_AND_ARROW and \
                         edge.get_endpoint2() == Endpoint.ARROW_AND_ARROW:
-                        i = dag.G.node_map[ancestor]
-                        j = dag.G.node_map[node]
+                        i = mag.G.node_map[ancestor]
+                        j = mag.G.node_map[node]
                         # Remove edge and set to ->
-                        dag.G.remove_edge(edge)
-                        dag.G.graph[i, j] = Endpoint.TAIL.value
-                        dag.G.graph[j, i] = Endpoint.ARROW.value
-
+                        mag.G.remove_edge(edge)
+                        mag.G.graph[i, j] = Endpoint.TAIL.value
+                        mag.G.graph[j, i] = Endpoint.ARROW.value
         return mag
     
     @staticmethod
