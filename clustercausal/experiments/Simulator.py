@@ -818,7 +818,7 @@ class Simulator:
         #     node_name = node.get_name()
         #     path_names = [[n.get_name() for n in path] for path in paths]
         #     names_bidirected_paths[node_name] = path_names
-        print(name_dict(bidirected_paths))
+        # print(name_dict(bidirected_paths))
 
         # Second find all collider paths
         collider_paths = copy.deepcopy(bidirected_paths)
@@ -839,7 +839,7 @@ class Simulator:
         #     node_name = node.get_name()
         #     path_names = [[n.get_name() for n in path] for path in paths]
         #     names_collider_paths[node_name] = path_names
-        print(name_dict(collider_paths))
+        # print(name_dict(collider_paths))
 
         # Third find all ancestors for every node
         ancestors_dict = {}
@@ -885,6 +885,8 @@ class Simulator:
                     # Add edge start_node <-> end_node
                     mag.G.graph[i, j] = Endpoint.ARROW.value
                     mag.G.graph[j, i] = Endpoint.ARROW.value
+                    # mag.G.graph[i, j] = 1
+                    # mag.G.graph[j, i] = 1
 
         # Remove almost directed cycles, <-> to ->
         for node in mag.G.nodes:
