@@ -803,7 +803,23 @@ class Simulator:
                             if next_node == last_node:
                                 # Check that edge wasn't flipped by causallearn
                                 next_node = edge.get_node1()
-                            bidirected_paths[node].append(bidir_path + [next_node])
+                            if next_node not in bidir_path:
+                                bidirected_paths[node].append(bidir_path + [next_node])
+        def name_dict(dict):
+            name_dictionary = {}
+            for key, values in dict.items():
+                key_name = key.get_name()
+                value_names = [[n.get_name() for n in value] for value in values]
+                name_dictionary[key_name] = value_names
+            return name_dictionary
+
+
+        names_bidirected_paths = {}
+        for node, paths in bidirected_paths.items():
+            node_name = node.get_name()
+            path_names = [[n.get_name() for n in path] for path in paths]
+            names_bidirected_paths[node_name] = path_names
+        print(names_bidirected_paths)
 
         # Second find all collider paths
         collider_paths = copy.deepcopy(bidirected_paths)
@@ -814,10 +830,17 @@ class Simulator:
                     if parent not in bidir_path:
                         collider_paths[node].append([parent] + bidir_path)
                 last_node = bidir_path[-1]
-                children = mag.G.get_children(last_node)
-                for child in children:
-                    if child not in bidir_path:
-                        collider_paths[node].append(bidir_path + [child])
+                last_parents = mag.G.get_children(last_node)
+                for l_parent in last_parents:
+                    if l_parent not in bidir_path:
+                        collider_paths[node].append(bidir_path + [l_parent])
+        names_collider_paths = {}
+
+        for node, paths in collider_paths.items():
+            node_name = node.get_name()
+            path_names = [[n.get_name() for n in path] for path in paths]
+            names_collider_paths[node_name] = path_names
+        print(names_collider_paths)
 
         # Third find all ancestors for every node
         ancestors_dict = {}
@@ -889,6 +912,6 @@ class Simulator:
             return True
         if edge.get_endpoint1() == Endpoint.TAIL_AND_ARROW and edge.get_endpoint2() == Endpoint.ARROW_AND_ARROW:
             return True
-        if edge.get_endopint1() == Endpoint.ARROW_AND_ARROW and edge.get_endpoint2() == Endpoint.TAIL_AND_ARROW:
+        if edge.get_endpoint1() == Endpoint.ARROW_AND_ARROW and edge.get_endpoint2() == Endpoint.TAIL_AND_ARROW:
             return True
         return False
