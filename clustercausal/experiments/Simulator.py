@@ -5,7 +5,7 @@ import itertools
 import networkx as nx
 import copy
 
-from typing import List, Dict, Tuple
+from typing import List 
 
 from causallearn.graph.GraphClass import CausalGraph
 from causallearn.graph.Endpoint import Endpoint
@@ -813,13 +813,12 @@ class Simulator:
                 name_dictionary[key_name] = value_names
             return name_dictionary
 
-
-        names_bidirected_paths = {}
-        for node, paths in bidirected_paths.items():
-            node_name = node.get_name()
-            path_names = [[n.get_name() for n in path] for path in paths]
-            names_bidirected_paths[node_name] = path_names
-        print(names_bidirected_paths)
+        # names_bidirected_paths = {}
+        # for node, paths in bidirected_paths.items():
+        #     node_name = node.get_name()
+        #     path_names = [[n.get_name() for n in path] for path in paths]
+        #     names_bidirected_paths[node_name] = path_names
+        print(name_dict(bidirected_paths))
 
         # Second find all collider paths
         collider_paths = copy.deepcopy(bidirected_paths)
@@ -830,17 +829,17 @@ class Simulator:
                     if parent not in bidir_path:
                         collider_paths[node].append([parent] + bidir_path)
                 last_node = bidir_path[-1]
-                last_parents = mag.G.get_children(last_node)
+                last_parents = mag.G.get_parents(last_node)
                 for l_parent in last_parents:
                     if l_parent not in bidir_path:
                         collider_paths[node].append(bidir_path + [l_parent])
-        names_collider_paths = {}
 
-        for node, paths in collider_paths.items():
-            node_name = node.get_name()
-            path_names = [[n.get_name() for n in path] for path in paths]
-            names_collider_paths[node_name] = path_names
-        print(names_collider_paths)
+        # names_collider_paths = {}
+        # for node, paths in collider_paths.items():
+        #     node_name = node.get_name()
+        #     path_names = [[n.get_name() for n in path] for path in paths]
+        #     names_collider_paths[node_name] = path_names
+        print(name_dict(collider_paths))
 
         # Third find all ancestors for every node
         ancestors_dict = {}
@@ -865,6 +864,8 @@ class Simulator:
                     else:
                         inducing_path = False
                         break
+                if not inducing_path:
+                    continue
                 # If we're here, we have an inducing path
                 inducing_path_names = [node.get_name() for node in collider_path]
                 print(f"Inducing path found: {inducing_path_names}")

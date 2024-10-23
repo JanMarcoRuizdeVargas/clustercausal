@@ -21,7 +21,7 @@ from clustercausal.utils.Utils import *
 
 os.environ[
     "R_HOME"
-] = "C:\Program Files\R\R-4.3.3"  # replace with the actual R home directory
+] = "C:\Program Files\R\R-4.3.1"  # replace with the actual R home directory
 import rpy2.robjects as robjects
 
 
