@@ -693,10 +693,13 @@ class Simulator:
         nx_helper_graph.add_nodes_from(
             node_names
         )  # ensure that all nodes are in the graph
-        import matplotlib.pyplot as plt
+        # import matplotlib.pyplot as plt
         # nx.draw(nx_helper_graph, with_labels=True)
         # nx.draw_networkx(nx_helper_graph, with_labels=True, arrowsize = 60, node_size = 7000, font_size = 50)
         # plt.show()
+        # nx_helper_graph = Simulator.get_nx_digraph_from_cdag_with_latents(dag)
+        # nx_helper_graph.add_edges_from(edge_name_list)
+
         topological_ordering = list(nx.topological_sort(nx_helper_graph))
         # successively partition the topological ordering into clusters
         # Each cluster gets at least one node
@@ -879,7 +882,7 @@ class Simulator:
                     continue
                 # If we're here, we have an inducing path
                 inducing_path_names = [node.get_name() for node in collider_path]
-                print(f"Inducing path found: {inducing_path_names}")
+                # print(f"Inducing path found: {inducing_path_names}")
                 # Have to add ->, <- or <-> between
                 # start_node and end_node, depending on the ancestorship
                 i = mag.G.node_map[start_node]
@@ -929,3 +932,22 @@ class Simulator:
         if edge.get_endpoint1() == Endpoint.ARROW_AND_ARROW and edge.get_endpoint2() == Endpoint.TAIL_AND_ARROW:
             return True
         return False
+    
+    @staticmethod
+    def get_nx_digraph_from_cdag_with_latents(dag):
+        '''
+        Returns an nx_digraph containing only the directed edges from dag.
+        Input:
+            dag: CausalGraph object
+        Output:
+            nx_digraph: nx.DiGraph object
+        '''
+        nx_dag = copy.deepcopy(dag)
+        A = nx_dag.G.graph
+        # keep only directed edges with this formula
+        new_graph = np.nan_to_num((A - A.T) / (np.abs(A - A.T)))
+        nx_dag.G.graph = new_graph
+        nx_dag.to_nx_graph()
+        nx_graph = nx_dag.nx_graph
+        nx_graph.add_nodes_from(nx_dag.G.get_node_names())
+        return nx_graph

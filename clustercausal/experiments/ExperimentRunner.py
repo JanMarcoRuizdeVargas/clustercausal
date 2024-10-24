@@ -7,6 +7,7 @@ import datetime
 import numpy as np
 import pickle
 import networkx as nx
+import copy
 
 from causallearn.search.ConstraintBased.PC import pc
 from causallearn.search.ConstraintBased.FCI import fci
@@ -144,35 +145,47 @@ class ExperimentRunner:
         simulation = Simulator(**param_dict)
         cluster_dag = simulation.run_with_latents()
 
+        nx_true_dag = Simulator.get_nx_digraph_from_cdag_with_latents(cluster_dag.true_dag)
+
+        # cluster_dag_nx = copy.deepcopy(cluster_dag)
+        # A = cluster_dag_nx.true_dag.G.graph
+        # # keep only directed edges with this formula
+        # new_graph = np.nan_to_num((A - A.T) / (np.abs(A - A.T)))
+        # cluster_dag_nx.true_dag.G.graph = new_graph
+        # cluster_dag_nx.true_dag.to_nx_graph()
+        # nx_true_dag = cluster_dag_nx.true_dag.nx_graph
+        # nx_true_dag.add_nodes_from(cluster_dag_nx.node_names)
         # Construct clustering
 
         # Construct nx_graph
 
         # Run C-FCI
-        cluster_est_graph = ClusterFCI(
+        cluster_fci = ClusterFCI(
             cdag=cluster_dag,
-            data=cluster_dag.data,
+            dataset=cluster_dag.data,
             alpha=param_dict["alpha"],
             verbose=False,
             show_progress=False,
-        ).run()
+        )
+
+        cluster_est_graph, cluster_edges = cluster_fci.run()
 
         # Run FCI
-        base_est_graph = fci(
+        base_G, base_edges = fci(
             cluster_dag.data, 
             alpha=param_dict["alpha"],
             verbose=False,
             show_progress=False,
         )
-
-
-        # Evaluate & save results
-        cluster_evaluation = Evaluator(
-            truth=cluster_dag.true_mag.G, est=cluster_est_graph.G
-        )
+        base_est_graph = CausalGraph(len(base_G.get_node_names()))
+        base_est_graph.G = base_G
 
         # Refactor the Evaluator into its own function and call it here
-        # TODO
+        cluster_dag.true_dag = cluster_dag.true_mag # don't have to rewrite other code
+
+        self.evaluate_and_save_results(
+            simulation, cluster_dag, nx_true_dag, cluster_est_graph, base_est_graph, cluster_fci, param_dict
+        )
 
     def run_pc_experiment(self, param_dict):
         """
@@ -204,6 +217,18 @@ class ExperimentRunner:
             show_progress=False,
             true_dag=nx_true_dag,
         )
+        self.evaluate_and_save_results(
+            simulation, cluster_dag, nx_true_dag, cluster_est_graph, base_est_graph, cluster_pc, param_dict
+        )
+
+    def evaluate_and_save_results(self, 
+                                  simulation, 
+                                  cluster_dag, 
+                                  nx_true_dag, 
+                                  cluster_est_graph, 
+                                  base_est_graph, 
+                                  cluster_alg,
+                                  param_dict):
         # evaluate causal discovery
         cluster_evaluation = Evaluator(
             truth=cluster_dag.true_dag.G, est=cluster_est_graph.G
@@ -340,18 +365,30 @@ class ExperimentRunner:
             cluster_mapping=one_cluster_dag_mapping,
             cluster_edges=one_cluster_dag_edges,
         )
-        one_cluster_pc = ClusterPC(
-            cdag=one_cluster_cluster_dag,
-            data=cluster_dag.data,
-            alpha=param_dict["alpha"],
-            indep_test=self.indep_test,
-            verbose=False,
-            show_progress=False,
-            true_dag=nx_true_dag,
-        )
-        one_cluster_est_graph = one_cluster_pc.run()
-        clust_no_indep_tests = cluster_pc.no_of_indep_tests_performed
-        one_clust_no_indep_tests = one_cluster_pc.no_of_indep_tests_performed
+
+        if self.discovery_alg == ['ClusterPC']:
+            one_cluster_alg = ClusterPC(
+                cdag=one_cluster_cluster_dag,
+                data=cluster_dag.data,
+                alpha=param_dict["alpha"],
+                indep_test=self.indep_test,
+                verbose=False,
+                show_progress=False,
+                true_dag=nx_true_dag,
+            )
+        if self.discovery_alg == ['ClusterFCI']:
+            one_cluster_alg = ClusterFCI(
+                cdag=one_cluster_cluster_dag,
+                dataset=cluster_dag.data,
+                alpha=param_dict["alpha"],
+                verbose=False,
+                show_progress=False,
+            )
+
+        one_cluster_alg.run()
+
+        clust_no_indep_tests = cluster_alg.no_of_indep_tests_performed
+        one_clust_no_indep_tests = one_cluster_alg.no_of_indep_tests_performed
 
         settings_results = {
             "n_nodes": simulation.n_nodes,

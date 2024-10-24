@@ -340,9 +340,9 @@ class ClusterDAG:
                         # )
                         pass
                     if inducing_path == True:
-                        print(
-                            f"Found inducing path between {start_cluster_name} and {end_cluster_name}: {collider_path}"
-                        )
+                        # print(
+                        #     f"Found inducing path between {start_cluster_name} and {end_cluster_name}: {collider_path}"
+                        # )
                         # Add the edge between the clusters
                         if (
                             start_cluster_name

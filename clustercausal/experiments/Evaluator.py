@@ -113,7 +113,8 @@ class Evaluator:
                 adjacency_confusion["precision"]
                 + adjacency_confusion["recall"]
             )
-        )
+        ) if (adjacency_confusion["precision"] + adjacency_confusion["recall"] != 0) else 0
+
         self.adjacency_confusion = adjacency_confusion
         return adjacency_confusion
 
@@ -139,7 +140,8 @@ class Evaluator:
             * arrow_confusion["precision"]
             * arrow_confusion["recall"]
             / (arrow_confusion["precision"] + arrow_confusion["recall"])
-        )
+        ) if (arrow_confusion["precision"] + arrow_confusion["recall"] != 0) else 0
+
         arrow_confusion["true_positive_ce"] = arrow_conf.get_arrows_tp_ce()
         arrow_confusion["false_positive_ce"] = arrow_conf.get_arrows_fp_ce()
         arrow_confusion["false_negative_ce"] = arrow_conf.get_arrows_fn_ce()
@@ -151,7 +153,8 @@ class Evaluator:
             * arrow_confusion["precision_ce"]
             * arrow_confusion["recall_ce"]
             / (arrow_confusion["precision_ce"] + arrow_confusion["recall_ce"])
-        )
+        ) if (arrow_confusion["precision_ce"] + arrow_confusion["recall_ce"] != 0) else 0
+
         self.arrow_confusion = arrow_confusion
         return arrow_confusion
 
