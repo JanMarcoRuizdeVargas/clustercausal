@@ -880,7 +880,7 @@ class Simulator:
                 elif end_node in ancestors_dict[start_node]:
                     # Add edge start_node <- end_node
                     mag.G.graph[i, j] = Endpoint.ARROW.value
-                    mag.G.graph[i, j] = Endpoint.TAIL.value
+                    mag.G.graph[j, i] = Endpoint.TAIL.value
                 else:
                     # Add edge start_node <-> end_node
                     mag.G.graph[i, j] = Endpoint.ARROW.value
