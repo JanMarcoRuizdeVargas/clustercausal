@@ -244,6 +244,17 @@ class Simulator:
         for node in remove_nodes:
             dag.G.remove_node(node)
 
+        # Rename node_names to be from X1, ..., Xn
+        new_node_map = {}
+        i = 1
+        for node, value in dag.G.node_map.items():
+            old_name = node.get_name()  # Get the old name of the node
+            new_name = f"X{i}"  # Generate the new name
+            node.set_name(new_name)
+            new_node_map[node] = value
+            i += 1
+        dag.G.node_map = new_node_map
+
         # Remove first 1/3 of data
         data = data[:, no_of_latent_vars:]
 
