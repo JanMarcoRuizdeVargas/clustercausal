@@ -1,3 +1,9 @@
+import sys
+import os
+
+# Add the parent directory of the clustercausal package to the Python path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+
 import argparse
 import yaml
 
@@ -28,7 +34,7 @@ def main():
     config = load_config(args.config_file)
 
     # Use the configuration as needed
-    experiment = ExperimentRunner(config)
+    experiment = ExperimentRunner(args.config_file)
     experiment.run_gridsearch_experiment()
 
 

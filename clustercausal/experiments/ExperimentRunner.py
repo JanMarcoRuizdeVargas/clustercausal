@@ -409,7 +409,7 @@ class ExperimentRunner:
             "indep_test": self.indep_test,
             "empty_graph_shd": empty_graph_shd,
             "cluster_connectivity": cluster_connectivity,
-            "C-PC indep tests": clust_no_indep_tests,
+            "Cluster indep tests": clust_no_indep_tests,
             "Base indep tests": one_clust_no_indep_tests,
         }
         results = {

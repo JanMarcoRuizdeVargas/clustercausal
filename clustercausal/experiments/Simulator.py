@@ -676,31 +676,33 @@ class Simulator:
         node_names = [node.get_name() for node in dag.G.get_nodes()]
 
         # Get topological ordering of nodes (only directed edges necessary)
+
+        # nx_helper_graph = Simulator.get_nx_digraph_from_cdag_with_latents(dag)
+        # # nx_helper_graph.add_edges_from(edge_name_list)
+        # topological_ordering = list(nx.topological_sort(nx_helper_graph))
+
         nx_helper_graph = nx.DiGraph()
         edge_name_list = []
         for edge in dag.G.get_graph_edges():
-            points_right = (edge.get_endpoint1() == Endpoint.TAIL) and (edge.get_endpoint2() == Endpoint.ARROW)
-            points_left = (edge.get_endpoint1() == Endpoint.ARROW) and (edge.get_endpoint2() == Endpoint.TAIL)
-            is_directed_edge = points_right or points_left
+            # points_right = (edge.get_endpoint1() == Endpoint.TAIL) and (edge.get_endpoint2() == Endpoint.ARROW)
+            # points_left = (edge.get_endpoint1() == Endpoint.ARROW) and (edge.get_endpoint2() == Endpoint.TAIL)
+            # is_directed_edge = points_right or points_left
+            # causallearn edges never point left
+            is_directed_edge = (edge.get_endpoint1() != Endpoint.ARROW)
             if is_directed_edge:
                 node1_name = edge.get_node1().get_name()
                 node2_name = edge.get_node2().get_name()
-                if points_right:
-                    edge_name_list.append((node1_name, node2_name))
-                if points_left:
-                    edge_name_list.append((node2_name, node1_name))
+                # if points_right:
+                #     edge_name_list.append((node1_name, node2_name))
+                # if points_left:
+                #     edge_name_list.append((node2_name, node1_name))
+                edge_name_list.append((node1_name, node2_name))
         nx_helper_graph.add_edges_from(edge_name_list)
         nx_helper_graph.add_nodes_from(
             node_names
         )  # ensure that all nodes are in the graph
-        # import matplotlib.pyplot as plt
-        # nx.draw(nx_helper_graph, with_labels=True)
-        # nx.draw_networkx(nx_helper_graph, with_labels=True, arrowsize = 60, node_size = 7000, font_size = 50)
-        # plt.show()
-        # nx_helper_graph = Simulator.get_nx_digraph_from_cdag_with_latents(dag)
-        # nx_helper_graph.add_edges_from(edge_name_list)
-
         topological_ordering = list(nx.topological_sort(nx_helper_graph))
+
         # successively partition the topological ordering into clusters
         # Each cluster gets at least one node
         # Get cluster cutoffs by drawing without replacement from topological ordering
@@ -944,6 +946,14 @@ class Simulator:
         '''
         nx_dag = copy.deepcopy(dag)
         A = nx_dag.G.graph
+        # # keep only directed edges with this formula
+        # new_graph = np.nan_to_num((A - A.T) / (np.abs(A - A.T)))
+        # nx_dag.G.graph = new_graph
+        # nx_dag.to_nx_graph()
+        # nx_graph = nx_dag.nx_graph
+        # nx_graph.add_nodes_from(nx_dag.G.get_node_names())
+        # return nx_graph
+        # A = dag.G.graph
         # keep only directed edges with this formula
         new_graph = np.nan_to_num((A - A.T) / (np.abs(A - A.T)))
         nx_dag.G.graph = new_graph
