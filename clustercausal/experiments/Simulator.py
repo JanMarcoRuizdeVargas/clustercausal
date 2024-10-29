@@ -207,7 +207,7 @@ class Simulator:
                 b = dag.G.node_map[node_b]
                 # if edge was pointing left, causallearn flips it..
                 # so we flip a and b too
-                if (edge is not None) and (edge.get_node1() != node_a) and edge.get_node2() != node_b:
+                if (edge is not None) and (edge.get_node1() != node_a) and (edge.get_node2() != node_b):
                     a, b = b, a
                 # Add bidirected edge if edge is none
                 if edge is None:
@@ -219,7 +219,7 @@ class Simulator:
                     dag.G.graph[b, a] = Endpoint.ARROW.value
                     # dag.G.add_edge(edge)
                 # If edge node_a -> node_b exists, change to -> and <->
-                elif edge.get_endpoint1() == Endpoint.TAIL:
+                elif edge.get_endpoint1() == Endpoint.TAIL and edge.get_endpoint2() == Endpoint.ARROW:
                     dag.G.remove_edge(edge)
                     # new_edge = Edge(node_a, node_b, \
                                     # Endpoint.TAIL_AND_ARROW, Endpoint.ARROW_AND_ARROW)
@@ -229,7 +229,7 @@ class Simulator:
                     dag.G.graph[a, b] = Endpoint.TAIL_AND_ARROW.value
                     dag.G.graph[b, a] = Endpoint.ARROW_AND_ARROW.value
                 # If edge node_a <- node_b exists, change to <- and <->
-                elif edge.get_endpoint1() == Endpoint.ARROW:
+                elif edge.get_endpoint1() == Endpoint.ARROW and edge.get_endpoint2() == Endpoint.TAIL:
                     dag.G.remove_edge(edge)
                     # edge.set_endpoint1(Endpoint.ARROW_AND_ARROW)
                     # edge.set_endpoint2(Endpoint.TAIL_AND_ARROW)
@@ -238,12 +238,14 @@ class Simulator:
                     # dag.G.add_edge(edge)
                     dag.G.graph[a, b] = Endpoint.ARROW_AND_ARROW.value
                     dag.G.graph[b, a] = Endpoint.TAIL_AND_ARROW.value
+                # Check for cycles
+                topo_order = self.get_topological_ordering(dag)
             remove_nodes.append(node_i)
-
         # Remove nodes
         for node in remove_nodes:
             dag.G.remove_node(node)
-
+        old_dag = copy.deepcopy(dag)
+        dag.old_dag = old_dag
         # Rename node_names to be from X1, ..., Xn
         new_node_map = {}
         i = 1
@@ -257,6 +259,8 @@ class Simulator:
 
         # Remove first 1/3 of data
         data = data[:, no_of_latent_vars:]
+
+        dag.topological_ordering = self.get_topological_ordering(dag)
 
         # Construct clustering
         if self.n_clusters is None:
@@ -697,11 +701,46 @@ class Simulator:
                 # if points_left:
                 #     edge_name_list.append((node2_name, node1_name))
                 edge_name_list.append((node1_name, node2_name))
+            node1_name = edge.get_node1().get_name()
+            node2_name = edge.get_node2().get_name()
+            if (edge.get_endpoint1() == Endpoint.ARROW) and (edge.get_endpoint2() == Endpoint.TAIL):
+                edge_name_list.append((node2_name, node1_name))
+            elif (edge.get_endpoint1() == Endpoint.TAIL) and (edge.get_endpoint2() == Endpoint.ARROW):
+                edge_name_list.append((node1_name, node2_name))
+            elif (edge.get_endpoint1() == Endpoint.ARROW_AND_ARROW) and (edge.get_endpoint2() == Endpoint.TAIL_AND_ARROW):
+                edge_name_list.append((node2_name, node1_name))
+            elif (edge.get_endpoint1() == Endpoint.TAIL_AND_ARROW) and (edge.get_endpoint2() == Endpoint.ARROW_AND_ARROW):
+                edge_name_list.append((node1_name, node2_name))
+            elif (edge.get_endpoint1() == Endpoint.ARROW) and (edge.get_endpoint2() == Endpoint.ARROW):
+                pass
+            elif (edge.get_endpoint1() == Endpoint.CIRCLE) and (edge.get_endpoint2() == Endpoint.CIRCLE):
+                print(edge)                      
+                raise ValueError("Edge not supported")
+            else:
+                print(edge)                      
+                raise ValueError("Edge not supported")
+               
         nx_helper_graph.add_edges_from(edge_name_list)
         nx_helper_graph.add_nodes_from(
             node_names
         )  # ensure that all nodes are in the graph
-        topological_ordering = list(nx.topological_sort(nx_helper_graph))
+        # print(nx_helper_graph.edges)
+        # print(nx_helper_graph.nodes)
+
+        # cycles = list(nx.simple_cycles(nx_helper_graph))
+        # for cycle in cycles:
+        #     print(f'Cycle: {cycle}')
+        #     node_cycle = []
+        #     for node in cycle:
+        #         node_cycle.append(ClusterDAG.get_node_by_name(node, dag))
+        #     node_cycle.append(ClusterDAG.get_node_by_name(cycle[0], dag))
+        #     for i  in range(len(node_cycle) - 1):
+        #         print(dag.G.get_edge(node_cycle[i], node_cycle[i+1]))
+        #         print(dag.G.get_edge(node_cycle[i], node_cycle[i+1]).get_endpoint1())
+        #         print(dag.G.get_edge(node_cycle[i], node_cycle[i+1]).get_endpoint2())
+
+        # topological_ordering = list(nx.topological_sort(nx_helper_graph))
+        topological_ordering = dag.topological_ordering
 
         # successively partition the topological ordering into clusters
         # Each cluster gets at least one node
@@ -785,7 +824,12 @@ class Simulator:
         for edge in dag.G.get_graph_edges():
             node1_name = edge.get_node1().get_name()
             node2_name = edge.get_node2().get_name()
-            edge_name_list.append((node1_name, node2_name))
+            if edge.get_endpoint1() == Endpoint.ARROW and edge.get_endpoint2() == Endpoint.ARROW:
+                continue
+            if edge.get_endpoint1() == Endpoint.ARROW_AND_ARROW and edge.get_endpoint2() == Endpoint.TAIL_AND_ARROW:
+                edge_name_list.append((node2_name, node1_name))
+            else:
+                edge_name_list.append((node1_name, node2_name))
         nx_helper_graph.add_edges_from(edge_name_list)
         nx_helper_graph.add_nodes_from(
             node_names

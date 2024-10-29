@@ -349,7 +349,7 @@ class ClusterFCI:
                     if y in np.intersect1d(
                         cluster_node_indices, local_graph_node_indices
                     ):
-                        # Consider separating sets in neighbors(y)
+                        # Consider separating sets in neighbors(y) for stability
                         Neigh_y = self.cdag.cg.neighbors(y)
                         if len(Neigh_y) < depth - 1:
                             continue
