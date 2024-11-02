@@ -1,6 +1,6 @@
 # Cluster DAGs as background knowledge for causal discovery
 
-This repository was developed as part of my master thesis at TUM. 
+<!-- This repository was developed as part of my master thesis at TUM.  -->
 
 We use the novel C-DAG (https://arxiv.org/abs/2202.12263) framework as background knowledge for causal discovery. 
 
