@@ -2,7 +2,7 @@
 
 This repository was developed as part of my master thesis at TUM. 
 
-I use the novel C-DAG (https://arxiv.org/abs/2202.12263) framework as background knowledge for causal discovery. 
+We use the novel C-DAG (https://arxiv.org/abs/2202.12263) framework as background knowledge for causal discovery. 
 
 <!-- Find my thesis at https://sharelatex.tum.de/read/npjkjggtqffh . Find the data used for the simulation studies at https://drive.google.com/drive/folders/1EViPZTdyvURl0vlQWfsmtFgypXUi0zym?usp=sharing .  -->
 
