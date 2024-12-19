@@ -19,9 +19,9 @@ from cdt.metrics import SID, SID_CPDAG, get_CPDAG
 from clustercausal.clusterdag.ClusterDAG import ClusterDAG
 from clustercausal.utils.Utils import *
 
-os.environ[
-    "R_HOME"
-] = "C:\Program Files\R\R-4.3.1"  # replace with the actual R home directory
+os.environ["R_HOME"] = (
+    "C:\Program Files\R\R-4.3.1"  # replace with the actual R home directory
+)
 import rpy2.robjects as robjects
 
 
@@ -106,14 +106,22 @@ class Evaluator:
         adjacency_confusion["precision"] = adj_conf.get_adj_precision()
         adjacency_confusion["recall"] = adj_conf.get_adj_recall()
         adjacency_confusion["f1_score"] = (
-            2
-            * adjacency_confusion["precision"]
-            * adjacency_confusion["recall"]
-            / (
+            (
+                2
+                * adjacency_confusion["precision"]
+                * adjacency_confusion["recall"]
+                / (
+                    adjacency_confusion["precision"]
+                    + adjacency_confusion["recall"]
+                )
+            )
+            if (
                 adjacency_confusion["precision"]
                 + adjacency_confusion["recall"]
+                != 0
             )
-        ) if (adjacency_confusion["precision"] + adjacency_confusion["recall"] != 0) else 0
+            else 0
+        )
 
         self.adjacency_confusion = adjacency_confusion
         return adjacency_confusion
@@ -136,11 +144,15 @@ class Evaluator:
         arrow_confusion["precision"] = arrow_conf.get_arrows_precision()
         arrow_confusion["recall"] = arrow_conf.get_arrows_recall()
         arrow_confusion["f1_score"] = (
-            2
-            * arrow_confusion["precision"]
-            * arrow_confusion["recall"]
-            / (arrow_confusion["precision"] + arrow_confusion["recall"])
-        ) if (arrow_confusion["precision"] + arrow_confusion["recall"] != 0) else 0
+            (
+                2
+                * arrow_confusion["precision"]
+                * arrow_confusion["recall"]
+                / (arrow_confusion["precision"] + arrow_confusion["recall"])
+            )
+            if (arrow_confusion["precision"] + arrow_confusion["recall"] != 0)
+            else 0
+        )
 
         arrow_confusion["true_positive_ce"] = arrow_conf.get_arrows_tp_ce()
         arrow_confusion["false_positive_ce"] = arrow_conf.get_arrows_fp_ce()
@@ -149,11 +161,21 @@ class Evaluator:
         arrow_confusion["precision_ce"] = arrow_conf.get_arrows_precision_ce()
         arrow_confusion["recall_ce"] = arrow_conf.get_arrows_recall_ce()
         arrow_confusion["f1_score_ce"] = (
-            2
-            * arrow_confusion["precision_ce"]
-            * arrow_confusion["recall_ce"]
-            / (arrow_confusion["precision_ce"] + arrow_confusion["recall_ce"])
-        ) if (arrow_confusion["precision_ce"] + arrow_confusion["recall_ce"] != 0) else 0
+            (
+                2
+                * arrow_confusion["precision_ce"]
+                * arrow_confusion["recall_ce"]
+                / (
+                    arrow_confusion["precision_ce"]
+                    + arrow_confusion["recall_ce"]
+                )
+            )
+            if (
+                arrow_confusion["precision_ce"] + arrow_confusion["recall_ce"]
+                != 0
+            )
+            else 0
+        )
 
         self.arrow_confusion = arrow_confusion
         return arrow_confusion

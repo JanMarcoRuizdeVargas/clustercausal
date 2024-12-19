@@ -13,7 +13,7 @@ from causallearn.search.ConstraintBased.PC import pc
 from causallearn.search.ConstraintBased.FCI import fci
 from causallearn.graph.GeneralGraph import GeneralGraph
 
-# from cdt.metrics import SID, SID_CPDAG, get_CPDAG
+from cdt.metrics import SID, SID_CPDAG, get_CPDAG
 
 from clustercausal.experiments.Simulator import Simulator
 from clustercausal.experiments.Evaluator import Evaluator
@@ -21,10 +21,10 @@ from clustercausal.algorithms.ClusterPC import ClusterPC
 from clustercausal.algorithms.ClusterFCI import ClusterFCI
 from clustercausal.utils.Utils import *
 
-# os.environ[
-#     "R_HOME"
-# ] = "C:\Program Files\R\R-4.3.1"  # replace with the actual R home directory
-# import rpy2.robjects as robjects
+os.environ["R_HOME"] = (
+    "C:\Program Files\R\R-4.3.1"  # replace with the actual R home directory
+)
+import rpy2.robjects as robjects
 
 
 class ExperimentRunner:
@@ -122,19 +122,19 @@ class ExperimentRunner:
                     self.run_experiment(params)
 
     def run_experiment(self, params):
-            """
-            Run an experiment
-            """
-            param_names = list(
-                self.linear_config.keys()
-            )  # for names doesn't matter linear or nonlinear
-            param_dict = dict(zip(param_names, params))
-            # print(f"Running experiment with parameters: {param_dict}")
-            # run simulation
-            if self.discovery_alg == ["ClusterPC"]:
-                self.run_pc_experiment(param_dict)
-            elif self.discovery_alg == ["ClusterFCI"]:
-                self.run_fci_experiment(param_dict)
+        """
+        Run an experiment
+        """
+        param_names = list(
+            self.linear_config.keys()
+        )  # for names doesn't matter linear or nonlinear
+        param_dict = dict(zip(param_names, params))
+        # print(f"Running experiment with parameters: {param_dict}")
+        # run simulation
+        if self.discovery_alg == ["ClusterPC"]:
+            self.run_pc_experiment(param_dict)
+        elif self.discovery_alg == ["ClusterFCI"]:
+            self.run_fci_experiment(param_dict)
 
     def run_fci_experiment(self, param_dict):
         """
@@ -145,7 +145,9 @@ class ExperimentRunner:
         simulation = Simulator(**param_dict)
         cluster_dag = simulation.run_with_latents()
 
-        nx_true_dag = Simulator.get_nx_digraph_from_cdag_with_latents(cluster_dag.true_dag)
+        nx_true_dag = Simulator.get_nx_digraph_from_cdag_with_latents(
+            cluster_dag.true_dag
+        )
 
         # cluster_dag_nx = copy.deepcopy(cluster_dag)
         # A = cluster_dag_nx.true_dag.G.graph
@@ -172,7 +174,7 @@ class ExperimentRunner:
 
         # Run FCI
         base_G, base_edges = fci(
-            cluster_dag.data, 
+            cluster_dag.data,
             alpha=param_dict["alpha"],
             verbose=False,
             show_progress=False,
@@ -181,10 +183,18 @@ class ExperimentRunner:
         base_est_graph.G = base_G
 
         # Refactor the Evaluator into its own function and call it here
-        cluster_dag.true_dag = cluster_dag.true_mag # don't have to rewrite other code
+        cluster_dag.true_dag = (
+            cluster_dag.true_mag
+        )  # don't have to rewrite other code
 
         self.evaluate_and_save_results(
-            simulation, cluster_dag, nx_true_dag, cluster_est_graph, base_est_graph, cluster_fci, param_dict
+            simulation,
+            cluster_dag,
+            nx_true_dag,
+            cluster_est_graph,
+            base_est_graph,
+            cluster_fci,
+            param_dict,
         )
 
     def run_pc_experiment(self, param_dict):
@@ -192,7 +202,7 @@ class ExperimentRunner:
         Run an experiment with PC
         # TODO add different independence tests
         """
-         # run simulation
+        # run simulation
         simulation = Simulator(**param_dict)
         cluster_dag = simulation.run()
         # run causal discovery
@@ -218,17 +228,25 @@ class ExperimentRunner:
             true_dag=nx_true_dag,
         )
         self.evaluate_and_save_results(
-            simulation, cluster_dag, nx_true_dag, cluster_est_graph, base_est_graph, cluster_pc, param_dict
+            simulation,
+            cluster_dag,
+            nx_true_dag,
+            cluster_est_graph,
+            base_est_graph,
+            cluster_pc,
+            param_dict,
         )
 
-    def evaluate_and_save_results(self, 
-                                  simulation, 
-                                  cluster_dag, 
-                                  nx_true_dag, 
-                                  cluster_est_graph, 
-                                  base_est_graph, 
-                                  cluster_alg,
-                                  param_dict):
+    def evaluate_and_save_results(
+        self,
+        simulation,
+        cluster_dag,
+        nx_true_dag,
+        cluster_est_graph,
+        base_est_graph,
+        cluster_alg,
+        param_dict,
+    ):
         # evaluate causal discovery
         cluster_evaluation = Evaluator(
             truth=cluster_dag.true_dag.G, est=cluster_est_graph.G
@@ -366,7 +384,7 @@ class ExperimentRunner:
             cluster_edges=one_cluster_dag_edges,
         )
 
-        if self.discovery_alg == ['ClusterPC']:
+        if self.discovery_alg == ["ClusterPC"]:
             one_cluster_alg = ClusterPC(
                 cdag=one_cluster_cluster_dag,
                 data=cluster_dag.data,
@@ -376,7 +394,7 @@ class ExperimentRunner:
                 show_progress=False,
                 true_dag=nx_true_dag,
             )
-        if self.discovery_alg == ['ClusterFCI']:
+        if self.discovery_alg == ["ClusterFCI"]:
             one_cluster_alg = ClusterFCI(
                 cdag=one_cluster_cluster_dag,
                 dataset=cluster_dag.data,

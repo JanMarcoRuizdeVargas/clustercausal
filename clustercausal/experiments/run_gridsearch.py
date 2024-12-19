@@ -9,7 +9,10 @@ sys.path.append(
     os.path.abspath(os.path.join(os.path.dirname(__file__), "../../"))
 )
 
-from clustercausal.experiments.ExperimentRunner import ExperimentRunner
+# from clustercausal.experiments.ExperimentRunner import ExperimentRunner
+from clustercausal.experiments.ExperimentRunnervsFCITiers import (
+    ExperimentRunner,
+)
 from clustercausal.utils.Utils import *
 
 if __name__ == "__main__":

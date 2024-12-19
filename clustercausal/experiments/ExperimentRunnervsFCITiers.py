@@ -13,19 +13,19 @@ from causallearn.search.ConstraintBased.PC import pc
 from causallearn.search.ConstraintBased.FCI import fci
 from causallearn.graph.GeneralGraph import GeneralGraph
 
-# from cdt.metrics import SID, SID_CPDAG, get_CPDAG
+from cdt.metrics import SID, SID_CPDAG, get_CPDAG
 
 from clustercausal.experiments.Simulator import Simulator
 from clustercausal.experiments.Evaluator import Evaluator
 from clustercausal.algorithms.ClusterPC import ClusterPC
 from clustercausal.algorithms.ClusterFCI import ClusterFCI
 from clustercausal.utils.Utils import *
-from clustercausal.aglorithms.FCITiers import fci_tiers
+from clustercausal.algorithms.FCITiers import fci_tiers
 
-# os.environ[
-#     "R_HOME"
-# ] = "C:\Program Files\R\R-4.3.1"  # replace with the actual R home directory
-# import rpy2.robjects as robjects
+os.environ["R_HOME"] = (
+    "C:\Program Files\R\R-4.3.1"  # replace with the actual R home directory
+)
+import rpy2.robjects as robjects
 
 
 class ExperimentRunner:

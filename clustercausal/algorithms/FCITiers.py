@@ -42,6 +42,11 @@ def fci_tiers(
     **kwargs,
 ) -> Tuple[CausalGraph, List[Edge]]:
 
+    print(
+        "Warning, FCITiers needs to be given the node_names and cluster_mapping in order, \
+          and starting from 'X1'... Example ordered cluster mapping: \
+          e.g. {'C1': ['X1'], 'C2': ['X2', 'X3']}, not {'C1': ['X2'], 'C2': ['X1', 'X3']}"
+    )
     # create empty CausalGraph
     node_names = []
     for tier in tiers:
@@ -175,15 +180,15 @@ def fci_exogenous(
         verbose=verbose,
     )
     # print(sep_sets)
-    reorientAllWith(cg.G, Endpoint.CIRCLE)
+    reorientAllWith_exogenous(cg.G, B_i_nodes, Endpoint.CIRCLE)
 
-    rule0(cg.G, nodes, sep_sets, background_knowledge, verbose)
+    rule0_exogenous(cg.G, nodes, sep_sets, background_knowledge, verbose)
 
     removeByPossibleDsep(cg.G, independence_test_method, alpha, sep_sets)
 
-    reorientAllWith(cg.G, Endpoint.CIRCLE)
+    reorientAllWith_exogenous(cg.G, B_i_nodes, Endpoint.CIRCLE)
 
-    rule0(cg.G, nodes, sep_sets, background_knowledge, verbose)
+    rule0_exogenous(cg.G, nodes, sep_sets, background_knowledge, verbose)
     # print(sep_sets)
     change_flag = True
     first_time = True
@@ -360,3 +365,93 @@ def fas_exogenous(
         pbar.close()
 
     return cg, sep_sets
+
+
+def rule0_exogenous(
+    graph: Graph,
+    nodes: List[Node],
+    sep_sets: Dict[Tuple[int, int], Set[int]],
+    knowledge: BackgroundKnowledge | None,
+    verbose: bool,
+):
+    # print(f"starting rule0")
+    # reorientAllWith(graph, Endpoint.CIRCLE)
+    fci_orient_bk(knowledge, graph)
+    for node_b in nodes:
+        adjacent_nodes = graph.get_adjacent_nodes(node_b)
+        # print(f"node_b: {node_b.get_name()}")
+        # print(f"adjacent nodes: {adjacent_nodes}")
+        if len(adjacent_nodes) < 2:
+            continue
+        cg = ChoiceGenerator(len(adjacent_nodes), 2)
+        combination = cg.next()
+        while combination is not None:
+            node_a = adjacent_nodes[combination[0]]
+            node_c = adjacent_nodes[combination[1]]
+            combination = cg.next()
+
+            if graph.is_adjacent_to(node_a, node_c):
+                continue
+            if graph.is_def_collider(node_a, node_b, node_c):
+                continue
+            # check if is collider
+            # print(f"sepsets in rule0: {sep_sets}")
+            sep_set = sep_sets.get(
+                (graph.get_node_map()[node_a], graph.get_node_map()[node_c])
+            )
+            if sep_set is not None and not sep_set.__contains__(
+                graph.get_node_map()[node_b]
+            ):
+                if not is_arrow_point_allowed(
+                    node_a, node_b, graph, knowledge
+                ):
+                    continue
+                if not is_arrow_point_allowed(
+                    node_c, node_b, graph, knowledge
+                ):
+                    continue
+
+                edge1 = graph.get_edge(node_a, node_b)
+                graph.remove_edge(edge1)
+                graph.add_edge(
+                    Edge(
+                        node_a,
+                        node_b,
+                        edge1.get_proximal_endpoint(node_a),
+                        Endpoint.ARROW,
+                    )
+                )
+
+                edge2 = graph.get_edge(node_c, node_b)
+                graph.remove_edge(edge2)
+                graph.add_edge(
+                    Edge(
+                        node_c,
+                        node_b,
+                        edge2.get_proximal_endpoint(node_c),
+                        Endpoint.ARROW,
+                    )
+                )
+
+                if verbose:
+                    print(
+                        "Orienting collider: "
+                        + node_a.get_name()
+                        + " *-> "
+                        + node_b.get_name()
+                        + " <-* "
+                        + node_c.get_name()
+                    )
+
+
+def reorientAllWith_exogenous(graph: Graph, B_i_nodes, endpoint: Endpoint):
+    # reorient all edges with CIRCLE Endpoint
+    ori_edges = graph.get_graph_edges()
+    for ori_edge in ori_edges:
+        node1 = ori_edge.get_node1()
+        node2 = ori_edge.get_node2()
+        if (node1 in B_i_nodes) and (node2 in B_i_nodes):
+            graph.remove_edge(ori_edge)
+            ori_edge.set_endpoint1(endpoint)
+            ori_edge.set_endpoint2(endpoint)
+            graph.add_edge(ori_edge)

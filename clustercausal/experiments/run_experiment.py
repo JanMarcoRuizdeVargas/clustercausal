@@ -2,12 +2,17 @@ import sys
 import os
 
 # Add the parent directory of the clustercausal package to the Python path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+sys.path.append(
+    os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+)
 
 import argparse
 import yaml
 
-from clustercausal.experiments.ExperimentRunner import ExperimentRunner
+# from clustercausal.experiments.ExperimentRunner import ExperimentRunner
+from clustercausal.experiments.ExperimentRunnervsFCITiers import (
+    ExperimentRunner,
+)
 
 
 def load_config(config_path):
