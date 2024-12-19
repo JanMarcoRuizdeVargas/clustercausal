@@ -143,7 +143,7 @@ def fci_exogenous(
     for node_name in B_i_node_names:
         B_i_nodes.append(ClusterDAG.get_node_by_name(node_name, cg=cg))
 
-    # Add edges A_i -> B_i and B_i o-o B_i
+    # Add edges A_i -> B_i and B_i o-o B_i to cg
     for node_a in A_i_nodes:
         for node_b in B_i_nodes:
             edge = cg.G.get_edge(node_a, node_b)
