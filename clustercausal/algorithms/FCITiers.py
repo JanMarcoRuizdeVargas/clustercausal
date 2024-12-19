@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import warnings
 import time
+import copy
 from tqdm.auto import tqdm
 from itertools import combinations, permutations
 from queue import Queue
@@ -32,6 +33,7 @@ from clustercausal.clusterdag.ClusterDAG import ClusterDAG
 def fci_tiers(
     tiers: List[str],
     cluster_mapping: Dict[str, List[str]],
+    cdag: ClusterDAG,
     dataset: ndarray,
     independence_test_method: str = fisherz,
     alpha: float = 0.05,
@@ -41,18 +43,13 @@ def fci_tiers(
     background_knowledge: BackgroundKnowledge | None = None,
     **kwargs,
 ) -> Tuple[CausalGraph, List[Edge]]:
-
-    print(
-        "Warning, FCITiers needs to be given the node_names and cluster_mapping in order, \
-          and starting from 'X1'... Example ordered cluster mapping: \
-          e.g. {'C1': ['X1'], 'C2': ['X2', 'X3']}, not {'C1': ['X2'], 'C2': ['X1', 'X3']}"
-    )
     # create empty CausalGraph
     node_names = []
     for tier in tiers:
         node_names.extend(cluster_mapping[tier])
 
-    cg = CausalGraph(no_of_var=len(node_names), node_names=node_names)
+    # cg = CausalGraph(no_of_var=len(node_names), node_names=node_names)
+    cg = copy.deepcopy(cdag.cg)
     # remove all edges
     for edge in cg.G.get_graph_edges():
         cg.G.remove_edge(edge)
