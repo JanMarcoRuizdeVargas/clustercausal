@@ -41,6 +41,7 @@ def fci_tiers(
     max_path_length: int = -1,
     verbose: bool = False,
     background_knowledge: BackgroundKnowledge | None = None,
+    show_progress=True,
     **kwargs,
 ) -> Tuple[CausalGraph, List[Edge]]:
     # create empty CausalGraph
@@ -78,6 +79,7 @@ def fci_tiers(
             max_path_length,
             verbose,
             background_knowledge,
+            show_progress=show_progress,
             **kwargs,
         )
 
@@ -99,6 +101,7 @@ def fci_exogenous(
     max_path_length: int = -1,
     verbose: bool = False,
     background_knowledge: BackgroundKnowledge | None = None,
+    show_progress=True,
     **kwargs,
 ) -> Tuple[CausalGraph, List[Edge]]:
     """
@@ -371,13 +374,10 @@ def rule0_exogenous(
     knowledge: BackgroundKnowledge | None,
     verbose: bool,
 ):
-    # print(f"starting rule0")
     # reorientAllWith(graph, Endpoint.CIRCLE)
     fci_orient_bk(knowledge, graph)
     for node_b in nodes:
         adjacent_nodes = graph.get_adjacent_nodes(node_b)
-        # print(f"node_b: {node_b.get_name()}")
-        # print(f"adjacent nodes: {adjacent_nodes}")
         if len(adjacent_nodes) < 2:
             continue
         cg = ChoiceGenerator(len(adjacent_nodes), 2)

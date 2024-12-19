@@ -183,6 +183,19 @@ class ExperimentRunner:
         base_est_graph = CausalGraph(len(base_G.get_node_names()))
         base_est_graph.G = base_G
 
+        # Run FCITiers
+        tiers = cluster_dag.get_cluster_topological_ordering()
+        cluster_mapping = cluster_dag.cluster_mapping
+        fcitiers_est_graph, fcitiers_edges = fci_tiers(
+            tiers=tiers,
+            cluster_mapping=cluster_mapping,
+            cdag=cluster_dag,
+            dataset=cluster_dag.data,
+            alpha=param_dict["alpha"],
+            verbose=False,
+            show_progress=False,
+        )
+
         # Refactor the Evaluator into its own function and call it here
         cluster_dag.true_dag = (
             cluster_dag.true_mag
@@ -194,6 +207,7 @@ class ExperimentRunner:
             nx_true_dag,
             cluster_est_graph,
             base_est_graph,
+            fcitiers_est_graph,
             cluster_fci,
             param_dict,
         )
@@ -228,12 +242,27 @@ class ExperimentRunner:
             show_progress=False,
             true_dag=nx_true_dag,
         )
+
+        # Run FCITiers
+        tiers = cluster_dag.get_cluster_topological_ordering()
+        cluster_mapping = cluster_dag.cluster_mapping
+        fcitiers_est_graph, fcitiers_edges = fci_tiers(
+            tiers=tiers,
+            cluster_mapping=cluster_mapping,
+            cdag=cluster_dag,
+            dataset=cluster_dag.data,
+            alpha=param_dict["alpha"],
+            verbose=False,
+            show_progress=False,
+        )
+
         self.evaluate_and_save_results(
             simulation,
             cluster_dag,
             nx_true_dag,
             cluster_est_graph,
             base_est_graph,
+            fcitiers_est_graph,
             cluster_pc,
             param_dict,
         )
@@ -245,6 +274,7 @@ class ExperimentRunner:
         nx_true_dag,
         cluster_est_graph,
         base_est_graph,
+        fcitiers_est_graph,
         cluster_alg,
         param_dict,
     ):
