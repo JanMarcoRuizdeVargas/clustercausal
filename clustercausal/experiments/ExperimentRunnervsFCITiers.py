@@ -279,6 +279,7 @@ class ExperimentRunner:
         param_dict,
     ):
         # evaluate causal discovery
+        # evaluate cluster version
         cluster_evaluation = Evaluator(
             truth=cluster_dag.true_dag.G, est=cluster_est_graph.G
         )
@@ -307,6 +308,7 @@ class ExperimentRunner:
             cdag=cluster_dag
         )
 
+        # evaluate base version
         base_evaluation = Evaluator(
             truth=cluster_dag.true_dag.G, est=base_est_graph.G
         )
@@ -328,6 +330,8 @@ class ExperimentRunner:
             "base_shd": base_shd,
             **base_sid,
         }
+
+        # evaluate pruned base version
         pruned_base_evaluation = Evaluator(
             truth=cluster_dag.true_dag.G, est=pruned_baseline_cg.G
         )
@@ -348,6 +352,29 @@ class ExperimentRunner:
             **pruned_base_arrow_confusion,
             "pruned_base_shd": pruned_base_shd,
             **pruned_base_sid,
+        }
+
+        # evaluate fci tiers
+        fcitiers_evaluation = Evaluator(
+            truth=cluster_dag.true_dag.G, est=fcitiers_est_graph.G
+        )
+        (
+            fcitiers_adjacency_confusion,
+            fcitiers_arrow_confusion,
+            fcitiers_shd,
+            fcitiers_sid,
+        ) = fcitiers_evaluation.get_causallearn_metrics(sid=self.sid)
+        fcitiers_adjacency_confusion = {
+            f"adj_{k}": v for k, v in fcitiers_adjacency_confusion.items()
+        }
+        fcitiers_arrow_confusion = {
+            f"arrow_{k}": v for k, v in fcitiers_arrow_confusion.items()
+        }
+        fcitiers_evaluation_results = {
+            **fcitiers_adjacency_confusion,
+            **fcitiers_arrow_confusion,
+            "fcitiers_shd": fcitiers_shd,
+            **fcitiers_sid,
         }
 
         edge_ratios = cluster_dag.get_cluster_connectedness()
@@ -391,6 +418,10 @@ class ExperimentRunner:
         pruned_base_evaluation_results = {
             k: numpy_to_python(v)
             for k, v in pruned_base_evaluation_results.items()
+        }
+        fcitiers_evaluation_results = {
+            k: numpy_to_python(v)
+            for k, v in fcitiers_evaluation_results.items()
         }
 
         if self.sid:
@@ -466,6 +497,7 @@ class ExperimentRunner:
             "cluster_evaluation_results": cluster_evaluation_results,
             "base_evaluation_results": base_evaluation_results,
             "pruned_base_evaluation_results": pruned_base_evaluation_results,
+            "fcitiers_evaluation_results": fcitiers_evaluation_results,
         }
 
         file_name = "results.yaml"
@@ -487,6 +519,11 @@ class ExperimentRunner:
         sub_path = os.path.join(file_path, file_name)
         with open(sub_path, "wb") as file:
             pickle.dump(cluster_dag, file)
+
+        file_name = "fcitiers_est_graph.pkl"
+        sub_path = os.path.join(file_path, file_name)
+        with open(sub_path, "wb") as file:
+            pickle.dump(fcitiers_est_graph, file)
 
         # file_name_cluster = "cluster_evaluation_results.yaml"
         # file_path_cluster = os.path.join(file_path, file_name_cluster)

@@ -145,6 +145,11 @@ def load_data(directory):
                 columns.append("cluster_" + key)
             for key in result_dict["pruned_base_evaluation_results"].keys():
                 columns.append("pruned_base_" + key)
+            # try:
+            for key in result_dict["fcitiers_evaluation_results"].keys():
+                columns.append("fcitiers_" + key)
+            # except:
+            #     pass
             for key in result_dict["settings"].keys():
                 columns.append(key)
             data = pd.DataFrame(columns=columns)

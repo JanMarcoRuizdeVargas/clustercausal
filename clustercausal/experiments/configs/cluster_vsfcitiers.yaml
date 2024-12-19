@@ -12,11 +12,11 @@ runs_per_configuration: 10
 n_nodes: [15]
 
 # will not be exactly graph edges due to gcastle dag generator, might be less edges
-n_edges: [15]
+n_edges: [15, 20, 30]
 
 dag_method: ['erdos_renyi']
 
-n_clusters: [2]
+n_clusters: [2, 4, 6]
 
 # approximate number of edges in C-DAG if cluster_method is 'cdag'
 n_c_edges: [4]
