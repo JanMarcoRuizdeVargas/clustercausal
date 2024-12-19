@@ -146,12 +146,12 @@ class ClusterDAG:
                         j = self.cluster_graph.G.node_map[cluster2]
                         # self.cluster_graph.G.graph[i, j] = 1
                         # self.cluster_graph.G.graph[j, i] = 2
-                        self.cluster_graph.G.graph[
-                            i, j
-                        ] = Endpoint.ARROW_AND_ARROW.value
-                        self.cluster_graph.G.graph[
-                            j, i
-                        ] = Endpoint.TAIL_AND_ARROW.value
+                        self.cluster_graph.G.graph[i, j] = (
+                            Endpoint.ARROW_AND_ARROW.value
+                        )
+                        self.cluster_graph.G.graph[j, i] = (
+                            Endpoint.TAIL_AND_ARROW.value
+                        )
                         # self.cluster_graph.G.adjust_dpath(j, i)
                     elif flag == "points_right":
                         # add edge cluster1 o-> cluster2
@@ -159,12 +159,12 @@ class ClusterDAG:
                         j = self.cluster_graph.G.node_map[cluster2]
                         # self.cluster_graph.G.graph[i, j] = 2
                         # self.cluster_graph.G.graph[j, i] = 1
-                        self.cluster_graph.G.graph[
-                            i, j
-                        ] = Endpoint.TAIL_AND_ARROW.value
-                        self.cluster_graph.G.graph[
-                            j, i
-                        ] = Endpoint.ARROW_AND_ARROW.value
+                        self.cluster_graph.G.graph[i, j] = (
+                            Endpoint.TAIL_AND_ARROW.value
+                        )
+                        self.cluster_graph.G.graph[j, i] = (
+                            Endpoint.ARROW_AND_ARROW.value
+                        )
                         # self.cluster_graph.G.adjust_dpath(i, j)
 
     def cdag_to_circle_mpdag(self, cg=None) -> CausalGraph:
