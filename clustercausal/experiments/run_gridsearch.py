@@ -18,7 +18,7 @@ from clustercausal.utils.Utils import *
 if __name__ == "__main__":
     # config_path = "clustercausal\experiments\configs\debug_config.yaml"
     # print("STARTING 1st EXPERIMENT")
-    config_path = "clustercausal\experiments\configs\cluster_vsfcitiers.yaml"
+    config_path = "clustercausal\experiments\configs\cluster_ci_tests_nodes_comparison.yaml"
     config_path = config_path.replace("\\", "/")
     experiment = ExperimentRunner(config_path)
     experiment.run_gridsearch_experiment()
