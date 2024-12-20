@@ -143,13 +143,13 @@ def load_data(directory):
                 columns.append("base_" + key)
             for key in result_dict["cluster_evaluation_results"].keys():
                 columns.append("cluster_" + key)
-            for key in result_dict["pruned_base_evaluation_results"].keys():
-                columns.append("pruned_base_" + key)
             # try:
             for key in result_dict["fcitiers_evaluation_results"].keys():
                 columns.append("fcitiers_" + key)
             # except:
             #     pass
+            for key in result_dict["pruned_base_evaluation_results"].keys():
+                columns.append("pruned_base_" + key)
             for key in result_dict["settings"].keys():
                 columns.append(key)
             data = pd.DataFrame(columns=columns)
@@ -193,6 +193,9 @@ def load_experiment_graphs(experiment_folder):
     """
     base_est_path = os.path.join(experiment_folder, "base_est_graph.pkl")
     cluster_est_path = os.path.join(experiment_folder, "cluster_est_graph.pkl")
+    fcitiers_est_path = os.path.join(
+        experiment_folder, "fcitiers_est_graph.pkl"
+    )
     cluster_dag_path = os.path.join(experiment_folder, "cluster_dag.pkl")
     if os.path.exists(base_est_path):
         with open(base_est_path, "rb") as file:
@@ -200,10 +203,13 @@ def load_experiment_graphs(experiment_folder):
     if os.path.exists(cluster_est_path):
         with open(cluster_est_path, "rb") as file:
             cluster_est_graph = pickle.load(file)
+    if os.path.exists(fcitiers_est_path):
+        with open(fcitiers_est_path, "rb") as file:
+            fcitiers_est_graph = pickle.load(file)
     if os.path.exists(cluster_dag_path):
         with open(cluster_dag_path, "rb") as file:
             cluster_dag = pickle.load(file)
-    return base_est_graph, cluster_est_graph, cluster_dag
+    return base_est_graph, cluster_est_graph, fcitiers_est_graph, cluster_dag
 
 
 def causallearn_to_nx_adjmat(adjmat: np.ndarray) -> np.ndarray:
