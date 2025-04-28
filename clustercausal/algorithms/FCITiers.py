@@ -55,7 +55,6 @@ def fci_tiers(
     for edge in cg.G.get_graph_edges():
         cg.G.remove_edge(edge)
 
-    # TODO add that functionality
     cg.no_of_indep_tests_performed = 0
 
     n = len(tiers)
@@ -131,10 +130,13 @@ def fci_exogenous(
     ## ------- end check parameters ------------
 
     nodes = []
-    for i in range(dataset.shape[1]):
-        node = GraphNode(f"X{i + 1}")
-        node.add_attribute("id", i)
+    for node in cg.G.nodes:
+        # node.add_attribute("id")
         nodes.append(node)
+    # for i in range(dataset.shape[1]):
+    #     node = GraphNode(f"X{i + 1}")
+    #     node.add_attribute("id", i)
+    #     nodes.append(node)
 
     # Adaptation: create CausalGraph for FCIExogenous
     A_i_node_names = []
@@ -301,6 +303,7 @@ def fas_exogenous(
                 Neigh_x_noy = np.delete(Neigh_x, np.where(Neigh_x == y))
                 for S in combinations(Neigh_x_noy, depth):
                     p = cg.ci_test(x, y, S)
+                    cg.no_of_indep_tests_performed += 1
                     if p > alpha:
                         if verbose:
                             print(

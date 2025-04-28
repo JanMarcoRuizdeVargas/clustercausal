@@ -5,12 +5,13 @@ import itertools
 import networkx as nx
 import copy
 
-from typing import List 
+from typing import List
 
 from causallearn.graph.GraphClass import CausalGraph
 from causallearn.graph.Endpoint import Endpoint
 from causallearn.graph.Edge import Edge
 from causallearn.graph.Node import Node
+from causallearn.graph.GraphNode import GraphNode
 
 from castle.datasets.simulator import IIDSimulation, DAG
 
@@ -150,10 +151,10 @@ class Simulator:
         cluster_dag.data = data
         return cluster_dag
 
-    def run_with_latents(self, no_of_latent_vars = None) -> ClusterDAG:
+    def run_with_latents(self, no_of_latent_vars=None) -> ClusterDAG:
         """
-        Runs the simulator and generates a cluster_dag. 
-        Adds latent variables by adding extra ones and removing them. 
+        Runs the simulator and generates a cluster_dag.
+        Adds latent variables by adding extra ones and removing them.
         'dag' is not really a dag anymore, because of the latent variables.
         'Arguments':
             cluster_method: 'dag'
@@ -162,7 +163,9 @@ class Simulator:
                 with true_dag, data, cluster_graph, cluster_mapping attributes
         """
         if self.cluster_method != "dag":
-            raise ValueError("For latent var simulation, cluster_method must be 'dag'")
+            raise ValueError(
+                "For latent var simulation, cluster_method must be 'dag'"
+            )
         # increase nodes + edges by 20% to simulate latent variables, if no
         # number of latent_variables was specified
         if no_of_latent_vars is None:
@@ -170,7 +173,7 @@ class Simulator:
         ratio = no_of_latent_vars / self.n_nodes
         self.n_nodes += no_of_latent_vars
         self.n_edges += round(self.n_edges * ratio)
-            
+
         dag = self.true_dag
 
         if dag is None:
@@ -198,7 +201,7 @@ class Simulator:
             # Get children of node
             # node_i = ClusterDAG.get_key_by_value(dag.G.node_map, i)
             node_i = ClusterDAG.get_node_by_name(topological_ordering[i], dag)
-            children = dag.G.get_children(node_i) #list of Node objects
+            children = dag.G.get_children(node_i)  # list of Node objects
             # Add bidirected edges between children
             for node_a, node_b in itertools.combinations(children, 2):
                 # Check if an edge already exists between node_a, node_b
@@ -207,7 +210,11 @@ class Simulator:
                 b = dag.G.node_map[node_b]
                 # if edge was pointing left, causallearn flips it..
                 # so we flip a and b too
-                if (edge is not None) and (edge.get_node1() != node_a) and (edge.get_node2() != node_b):
+                if (
+                    (edge is not None)
+                    and (edge.get_node1() != node_a)
+                    and (edge.get_node2() != node_b)
+                ):
                     a, b = b, a
                 # Add bidirected edge if edge is none
                 if edge is None:
@@ -219,17 +226,23 @@ class Simulator:
                     dag.G.graph[b, a] = Endpoint.ARROW.value
                     # dag.G.add_edge(edge)
                 # If edge node_a -> node_b exists, change to -> and <->
-                elif edge.get_endpoint1() == Endpoint.TAIL and edge.get_endpoint2() == Endpoint.ARROW:
+                elif (
+                    edge.get_endpoint1() == Endpoint.TAIL
+                    and edge.get_endpoint2() == Endpoint.ARROW
+                ):
                     dag.G.remove_edge(edge)
                     # new_edge = Edge(node_a, node_b, \
-                                    # Endpoint.TAIL_AND_ARROW, Endpoint.ARROW_AND_ARROW)
+                    # Endpoint.TAIL_AND_ARROW, Endpoint.ARROW_AND_ARROW)
                     # edge.set_endpoint1(Endpoint.TAIL_AND_ARROW)
                     # edge.set_endpoint2(Endpoint.ARROW_AND_ARROW)
                     # dag.G.add_edge(edge)
                     dag.G.graph[a, b] = Endpoint.TAIL_AND_ARROW.value
                     dag.G.graph[b, a] = Endpoint.ARROW_AND_ARROW.value
                 # If edge node_a <- node_b exists, change to <- and <->
-                elif edge.get_endpoint1() == Endpoint.ARROW and edge.get_endpoint2() == Endpoint.TAIL:
+                elif (
+                    edge.get_endpoint1() == Endpoint.ARROW
+                    and edge.get_endpoint2() == Endpoint.TAIL
+                ):
                     dag.G.remove_edge(edge)
                     # edge.set_endpoint1(Endpoint.ARROW_AND_ARROW)
                     # edge.set_endpoint2(Endpoint.TAIL_AND_ARROW)
@@ -275,6 +288,191 @@ class Simulator:
 
         # Get MAG for evaluation
         cluster_dag.true_mag = self.get_mag(cluster_dag.true_dag)
+
+        return cluster_dag
+
+    def run_with_tbk(self, no_of_tiers=3) -> ClusterDAG:
+        """
+        Runs a cluster_dag that only has latent variables within a cluster,
+        i.e. that satisfies tiered background knowledge.
+        """
+        # Generate a C-DAG
+        cluster_dag = self.generate_dag_via_clusters(
+            self.n_clusters,
+            self.n_c_edges,
+            self.n_nodes,
+            self.n_edges,
+            self.dag_method,
+            self.seed,
+            self.weight_range,
+            node_names=None,
+        )
+        max_latents = self.n_edges // 2 + 1
+        # cluster_dag.cg.draw_pydot_graph()
+        # Add latent variables between some nodes that are in same cluster
+        latent_nodes = {}
+        for cluster in cluster_dag.cluster_mapping.keys():
+            node_ratio = len(cluster_dag.cluster_mapping[cluster]) / len(
+                cluster_dag.cg.G.get_nodes()
+            )
+            max_latents_in_cluster = int(max_latents * node_ratio)
+            non_adjacent_nodes = []
+            # Skip if only one node in cluster
+            if len(cluster_dag.cluster_mapping[cluster]) == 1:
+                continue
+            # First make list of tuples of potential candidates for latent variables
+            for node_a_name in cluster_dag.cluster_mapping[cluster]:
+                node_a = ClusterDAG.get_node_by_name(
+                    node_a_name, cluster_dag.cg
+                )
+                # Get non-adjacent node in cluster,
+                #  that is not in ancestor(node_a) or descendant(node_a)
+                neighbors_a = cluster_dag.cg.G.get_adjacent_nodes(node_a)
+                neighbors_a_names = [node.get_name() for node in neighbors_a]
+                nonneighbors_a_names_in_cluster = list(
+                    set(cluster_dag.cluster_mapping[cluster])
+                    - set(neighbors_a_names)
+                )
+                # print(
+                #     f"Non-neighbors of {node_a.get_name()}: {nonneighbors_a_names_in_cluster}"
+                # )
+                nonneighbors_a_in_cluster = [
+                    ClusterDAG.get_node_by_name(name, cluster_dag.cg)
+                    for name in nonneighbors_a_names_in_cluster
+                ]
+
+                # drop descendants or ancestors of node_a in neighbors_a_in_cluster
+                for node in nonneighbors_a_in_cluster:
+                    if cluster_dag.cg.G.is_descendant_of(
+                        node_a, node
+                    ) or cluster_dag.cg.G.is_ancestor_of(node_a, node):
+                        nonneighbors_a_in_cluster.remove(node)
+
+                if len(nonneighbors_a_in_cluster) == 0:
+                    # No neighbors in cluster, so skip this iteration
+                    continue
+
+                for node_b in nonneighbors_a_in_cluster:
+                    if (node_a, node_b) or (
+                        node_b,
+                        node_a,
+                    ) not in non_adjacent_nodes:
+                        non_adjacent_nodes.append((node_a, node_b))
+            # shuffle list
+            np.random.seed(self.seed)
+            np.random.shuffle(non_adjacent_nodes)
+            # Second create latent variables between some members of the list
+            # max_latents = int(
+            #     len(cluster_dag.cluster_mapping[cluster]) / 3 + 1
+            # )
+            for i in range(
+                min(max_latents_in_cluster, len(non_adjacent_nodes))
+            ):
+                node_a, node_b = non_adjacent_nodes[i]
+                # Create a latent variable between node_a and node_b
+                node_l = GraphNode(f"L{len(latent_nodes.keys())}")
+                latent_nodes[node_l] = (node_a, node_b)
+                # print(
+                #     f"Adding latent variable {node_l.get_name()} between {node_a.get_name()} and {node_b.get_name()}"
+                # )
+                cluster_dag.cg.G.add_node(node_l)
+                # add edges node_l -> node_a and node_l -> node_b
+                edge = Edge(node_l, node_a, Endpoint.TAIL, Endpoint.ARROW)
+                cluster_dag.cg.G.add_edge(edge)
+                edge = Edge(node_l, node_b, Endpoint.TAIL, Endpoint.ARROW)
+                cluster_dag.cg.G.add_edge(edge)
+
+            # ------------------------------
+            # # Create at maximum nodes/2 latent variables per cluster
+            # max_latents = int(
+            #     len(cluster_dag.cluster_mapping[cluster]) / 2 + 1
+            # )
+            # # for i in range(max_latents):
+            # #     # Get a random node in the cluster
+            # #     np.random.seed(self.seed)
+            # #     node_a_name = np.random.choice(
+            # #         cluster_dag.cluster_mapping[cluster],
+            # #         size=1,
+            # #         replace=False,
+            # #     )[0]
+            # node_a_names = np.random.choice(
+            #     cluster_dag.cluster_mapping[cluster],
+            #     size=max_latents,
+            #     replace=False,
+            # )
+            # for node_a_name in node_a_names:
+            #     node_a = ClusterDAG.get_node_by_name(
+            #         node_a_name, cluster_dag.cg
+            #     )
+            #     # Get non-adjacent node in cluster,
+            #     #  that is not in ancestor(node_a) or descendant(node_a)
+            #     neighbors_a = cluster_dag.cg.G.get_adjacent_nodes(node_a)
+            #     neighbors_a_names = [node.get_name() for node in neighbors_a]
+            #     neighbors_a_names_in_cluster = list(
+            #         set(neighbors_a_names)
+            #         & set(cluster_dag.cluster_mapping[cluster])
+            #     )
+            #     # neighbors_a_in_cluster = [
+            #     #     cluster_dag.cg.get_node_by_name(name)
+            #     #     for name in neighbors_a_names_in_cluster
+            #     # ]
+            #     neighbors_a_in_cluster = [
+            #         ClusterDAG.get_node_by_name(name, cluster_dag.cg)
+            #         for name in neighbors_a_names_in_cluster
+            #     ]
+
+            #     # drop descendants or ancestors of node_a in neighbors_a_in_cluster
+            #     for node in neighbors_a_in_cluster:
+            #         if cluster_dag.cg.G.is_descendant_of(
+            #             node_a, node
+            #         ) or cluster_dag.cg.G.is_ancestor_of(node_a, node):
+            #             neighbors_a_in_cluster.remove(node)
+
+            #     # Choose node_b from remaining neighbors_a_in_cluster
+            #     if len(neighbors_a_in_cluster) == 0:
+            #         # No neighbors in cluster, so skip this iteration
+            #         continue
+            #     node_b = np.random.choice(
+            #         neighbors_a_in_cluster, size=1, replace=False
+            #     )[0]
+
+            #     # Create a latent variable between node_a and node_b
+            #     node_l = GraphNode(f"L{len(latent_nodes.keys())}")
+            #     latent_nodes[node_l] = (node_a, node_b)
+            #     print(
+            #         f"Adding latent variable {node_l.get_name()} between {node_a.get_name()} and {node_b.get_name()}"
+            #     )
+            #     cluster_dag.cg.G.add_node(node_l)
+            #     # add edges node_l -> node_a and node_l -> node_b
+            #     edge = Edge(node_l, node_a, Endpoint.TAIL, Endpoint.ARROW)
+            #     cluster_dag.cg.G.add_edge(edge)
+            #     edge = Edge(node_l, node_b, Endpoint.TAIL, Endpoint.ARROW)
+            #     cluster_dag.cg.G.add_edge(edge)
+        # ------------------------------
+        # Generate data
+        data = self.generate_data(
+            cluster_dag.cg,
+            self.sample_size,
+            self.distribution_type,
+            self.scm_method,
+            self.noise_scale,
+        )
+        cluster_dag.data = data
+
+        # Remove the latent variables from the cluster_dag and add bidirected edges
+        for node_l in latent_nodes.keys():
+            cluster_dag.cg.G.remove_node(node_l)
+            node_a, node_b = latent_nodes[node_l]
+            edge = Edge(node_a, node_b, Endpoint.ARROW, Endpoint.ARROW)
+            cluster_dag.cg.G.add_edge(edge)
+
+        # Remove the latent variables from the data
+        cluster_dag.data = np.delete(
+            cluster_dag.data, np.s_[-len(latent_nodes) :], axis=1
+        )
+
+        # update true_dag
+        cluster_dag.true_dag = cluster_dag.cg
 
         return cluster_dag
 
@@ -348,7 +546,7 @@ class Simulator:
         seed,
         weight_range,
         node_names=None,
-    ):
+    ) -> ClusterDAG:
         """
         Generates a random C-DAG with gcastle and then
         drops out edges from the mpdag to generate a DAG
@@ -422,7 +620,7 @@ class Simulator:
                     cluster_graph.G.graph[j, i] = 1
 
         if node_names is None:
-            node_names = [f"X{i+1}" for i in range(n_nodes)]
+            node_names = [f"X{i}" for i in range(n_nodes)]
         # Partition nodes into clusters
         node_range = list(range(1, n_nodes))
         cluster_cutoffs = sorted(
@@ -468,10 +666,16 @@ class Simulator:
 
         # Generate DAG and adjacency matrix
         # Probability of keeping edges, influenced by n_edges
-        p_intra = 3 * (n_edges / (n_nodes * (n_nodes - 1)))
-        p_inter = 1.5 * (n_edges / (n_nodes * (n_nodes - 1)))
+        # p_intra = 3 * (n_edges / (n_nodes * (n_nodes - 1)))
+        # p_inter = 1.5 * (n_edges / (n_nodes * (n_nodes - 1)))
         cluster_dag.cdag_to_mpdag()
         cluster_dag.true_dag = cluster_dag.cg
+
+        # get number of MPDAG edges to controll edge dropout probability
+        no_of_mpdag_edges = len(cluster_dag.cg.G.get_graph_edges())
+        # print(f"Number of MPDAG edges: {no_of_mpdag_edges}")
+        p_intra = n_edges / no_of_mpdag_edges
+        p_inter = n_edges / no_of_mpdag_edges
         # For pseudo-rng
         if seed is not None:
             np.random.seed(seed)
@@ -513,7 +717,6 @@ class Simulator:
                 and ((c1_name, c2_name) or (c2_name, c1_name)) in cluster_edges
             ):
                 # Drop edge out with probability (1- p_inter)
-                # Drop edge out with probability (1- p_intra)
                 np.random.seed(seed)
                 p = np.random.uniform()
                 if p > p_inter:
@@ -659,12 +862,12 @@ class Simulator:
         )
         cluster_dag.true_dag = dag
         return cluster_dag
-    
+
     @staticmethod
     def generate_clustering_with_latents(dag: CausalGraph, n_clusters, seed):
         """
         Generate an admissible (no cycles) clustering from dag. Supports latent
-        variables. 
+        variables.
         Arguments:
             dag: the causal graph
             n_clusters: number of clusters in the cluster graph, if None then random
@@ -673,7 +876,7 @@ class Simulator:
             cluster_dag: a ClusterDAG object
         Adjusts true_dag such that cluster_graph is admissible
         """
-        
+
         # Generate a cluster graph
         n_nodes = dag.G.graph.shape[0]
         np.random.seed(seed)
@@ -692,7 +895,7 @@ class Simulator:
             # points_left = (edge.get_endpoint1() == Endpoint.ARROW) and (edge.get_endpoint2() == Endpoint.TAIL)
             # is_directed_edge = points_right or points_left
             # causallearn edges never point left
-            is_directed_edge = (edge.get_endpoint1() != Endpoint.ARROW)
+            is_directed_edge = edge.get_endpoint1() != Endpoint.ARROW
             if is_directed_edge:
                 node1_name = edge.get_node1().get_name()
                 node2_name = edge.get_node2().get_name()
@@ -703,23 +906,35 @@ class Simulator:
                 edge_name_list.append((node1_name, node2_name))
             node1_name = edge.get_node1().get_name()
             node2_name = edge.get_node2().get_name()
-            if (edge.get_endpoint1() == Endpoint.ARROW) and (edge.get_endpoint2() == Endpoint.TAIL):
+            if (edge.get_endpoint1() == Endpoint.ARROW) and (
+                edge.get_endpoint2() == Endpoint.TAIL
+            ):
                 edge_name_list.append((node2_name, node1_name))
-            elif (edge.get_endpoint1() == Endpoint.TAIL) and (edge.get_endpoint2() == Endpoint.ARROW):
+            elif (edge.get_endpoint1() == Endpoint.TAIL) and (
+                edge.get_endpoint2() == Endpoint.ARROW
+            ):
                 edge_name_list.append((node1_name, node2_name))
-            elif (edge.get_endpoint1() == Endpoint.ARROW_AND_ARROW) and (edge.get_endpoint2() == Endpoint.TAIL_AND_ARROW):
+            elif (edge.get_endpoint1() == Endpoint.ARROW_AND_ARROW) and (
+                edge.get_endpoint2() == Endpoint.TAIL_AND_ARROW
+            ):
                 edge_name_list.append((node2_name, node1_name))
-            elif (edge.get_endpoint1() == Endpoint.TAIL_AND_ARROW) and (edge.get_endpoint2() == Endpoint.ARROW_AND_ARROW):
+            elif (edge.get_endpoint1() == Endpoint.TAIL_AND_ARROW) and (
+                edge.get_endpoint2() == Endpoint.ARROW_AND_ARROW
+            ):
                 edge_name_list.append((node1_name, node2_name))
-            elif (edge.get_endpoint1() == Endpoint.ARROW) and (edge.get_endpoint2() == Endpoint.ARROW):
+            elif (edge.get_endpoint1() == Endpoint.ARROW) and (
+                edge.get_endpoint2() == Endpoint.ARROW
+            ):
                 pass
-            elif (edge.get_endpoint1() == Endpoint.CIRCLE) and (edge.get_endpoint2() == Endpoint.CIRCLE):
-                print(edge)                      
+            elif (edge.get_endpoint1() == Endpoint.CIRCLE) and (
+                edge.get_endpoint2() == Endpoint.CIRCLE
+            ):
+                print(edge)
                 raise ValueError("Edge not supported")
             else:
-                print(edge)                      
+                print(edge)
                 raise ValueError("Edge not supported")
-               
+
         nx_helper_graph.add_edges_from(edge_name_list)
         nx_helper_graph.add_nodes_from(
             node_names
@@ -751,7 +966,7 @@ class Simulator:
         )
         cluster_cutoffs.append(
             n_nodes
-        ) # ensure that last cluster has all remaining nodes
+        )  # ensure that last cluster has all remaining nodes
 
         cluster_mapping = {}
         cluster_names = [f"C{i+1}" for i in range(n_clusters)]
@@ -787,14 +1002,24 @@ class Simulator:
                     if (c1_name, c2_name) not in cluster_edges:
                         cluster_edges.append((c1_name, c2_name))
                 # Add edges <-> and <-
-                if endpoint1 == Endpoint.ARROW_AND_ARROW and endpoint2 == Endpoint.TAIL_AND_ARROW:
-                    if ((c1_name, c2_name) or (c2_name, c1_name)) not in cluster_bidirected_edges:
+                if (
+                    endpoint1 == Endpoint.ARROW_AND_ARROW
+                    and endpoint2 == Endpoint.TAIL_AND_ARROW
+                ):
+                    if (
+                        (c1_name, c2_name) or (c2_name, c1_name)
+                    ) not in cluster_bidirected_edges:
                         cluster_bidirected_edges.append((c1_name, c2_name))
                     if (c2_name, c1_name) not in cluster_edges:
                         cluster_edges.append((c2_name, c1_name))
                 # Add edges <-> and ->
-                if endpoint1 == Endpoint.TAIL_AND_ARROW and endpoint2 == Endpoint.ARROW_AND_ARROW:
-                    if ((c1_name, c2_name) or (c2_name, c1_name)) not in cluster_bidirected_edges:
+                if (
+                    endpoint1 == Endpoint.TAIL_AND_ARROW
+                    and endpoint2 == Endpoint.ARROW_AND_ARROW
+                ):
+                    if (
+                        (c1_name, c2_name) or (c2_name, c1_name)
+                    ) not in cluster_bidirected_edges:
                         cluster_bidirected_edges.append((c1_name, c2_name))
                     if (c1_name, c2_name) not in cluster_edges:
                         cluster_edges.append((c1_name, c2_name))
@@ -802,18 +1027,21 @@ class Simulator:
                 if endpoint1 == Endpoint.ARROW and endpoint2 == Endpoint.ARROW:
                     if (c1_name, c2_name) not in cluster_bidirected_edges:
                         cluster_bidirected_edges.append((c1_name, c2_name))
-        
+
         cluster_dag = ClusterDAG(
-            cluster_mapping, cluster_edges, cluster_bidirected_edges, node_names=node_names
+            cluster_mapping,
+            cluster_edges,
+            cluster_bidirected_edges,
+            node_names=node_names,
         )
 
         cluster_dag.true_dag = dag
         return cluster_dag
-    
+
     @staticmethod
     def get_topological_ordering(dag: CausalGraph):
         """
-        Returns topological ordering of nodes from 'dag'. 
+        Returns topological ordering of nodes from 'dag'.
         Returns:
             - topological_ordering: list of node names in topological order
         """
@@ -824,9 +1052,15 @@ class Simulator:
         for edge in dag.G.get_graph_edges():
             node1_name = edge.get_node1().get_name()
             node2_name = edge.get_node2().get_name()
-            if edge.get_endpoint1() == Endpoint.ARROW and edge.get_endpoint2() == Endpoint.ARROW:
+            if (
+                edge.get_endpoint1() == Endpoint.ARROW
+                and edge.get_endpoint2() == Endpoint.ARROW
+            ):
                 continue
-            if edge.get_endpoint1() == Endpoint.ARROW_AND_ARROW and edge.get_endpoint2() == Endpoint.TAIL_AND_ARROW:
+            if (
+                edge.get_endpoint1() == Endpoint.ARROW_AND_ARROW
+                and edge.get_endpoint2() == Endpoint.TAIL_AND_ARROW
+            ):
                 edge_name_list.append((node2_name, node1_name))
             else:
                 edge_name_list.append((node1_name, node2_name))
@@ -836,17 +1070,17 @@ class Simulator:
         )  # ensure that all nodes are in the graph
         topological_ordering = list(nx.topological_sort(nx_helper_graph))
         return topological_ordering
-    
+
     @staticmethod
     def get_mag(dag: CausalGraph) -> CausalGraph:
         """
-        Finds inducing paths and adds edges to make it a maximal ancestral graph. 
-        This graph serves as ground truth for causal discovery. 
+        Finds inducing paths and adds edges to make it a maximal ancestral graph.
+        This graph serves as ground truth for causal discovery.
         """
         mag = copy.deepcopy(dag)
         ###     Find inducing paths      ###
-        
-        # First find all bidirected paths 
+
+        # First find all bidirected paths
         bidirected_paths = {}
         for node in mag.G.nodes:
             bidirected_paths[node] = [[node]]
@@ -864,12 +1098,17 @@ class Simulator:
                                 # Check that edge wasn't flipped by causallearn
                                 next_node = edge.get_node1()
                             if next_node not in bidir_path:
-                                bidirected_paths[node].append(bidir_path + [next_node])
+                                bidirected_paths[node].append(
+                                    bidir_path + [next_node]
+                                )
+
         def name_dict(dict):
             name_dictionary = {}
             for key, values in dict.items():
                 key_name = key.get_name()
-                value_names = [[n.get_name() for n in value] for value in values]
+                value_names = [
+                    [n.get_name() for n in value] for value in values
+                ]
                 name_dictionary[key_name] = value_names
             return name_dictionary
 
@@ -908,7 +1147,7 @@ class Simulator:
             mag.G.collect_ancestors(node, ancestors)
             ancestors_dict[node] = ancestors
 
-        # Fourth for collider paths with 3 or more clusters, 
+        # Fourth for collider paths with 3 or more clusters,
         # check for inducing paths and add edge if found
         for node in collider_paths.keys():
             for collider_path in collider_paths[node]:
@@ -918,16 +1157,19 @@ class Simulator:
                 start_node = collider_path[0]
                 end_node = collider_path[-1]
                 for coll_node in collider_path[1:-1]:
-                    if (coll_node in ancestors_dict[start_node]) or \
-                        (coll_node in ancestors_dict[end_node]):
-                        pass 
+                    if (coll_node in ancestors_dict[start_node]) or (
+                        coll_node in ancestors_dict[end_node]
+                    ):
+                        pass
                     else:
                         inducing_path = False
                         break
                 if not inducing_path:
                     continue
                 # If we're here, we have an inducing path
-                inducing_path_names = [node.get_name() for node in collider_path]
+                inducing_path_names = [
+                    node.get_name() for node in collider_path
+                ]
                 # print(f"Inducing path found: {inducing_path_names}")
                 # Have to add ->, <- or <-> between
                 # start_node and end_node, depending on the ancestorship
@@ -955,9 +1197,11 @@ class Simulator:
             # Check if node <-> ancestor
             for ancestor in ancestors:
                 edge = mag.G.get_edge(ancestor, node)
-                if edge: # edge is either -> and <-> or ->
-                    if edge.get_endpoint1() == Endpoint.TAIL_AND_ARROW and \
-                        edge.get_endpoint2() == Endpoint.ARROW_AND_ARROW:
+                if edge:  # edge is either -> and <-> or ->
+                    if (
+                        edge.get_endpoint1() == Endpoint.TAIL_AND_ARROW
+                        and edge.get_endpoint2() == Endpoint.ARROW_AND_ARROW
+                    ):
                         i = mag.G.node_map[ancestor]
                         j = mag.G.node_map[node]
                         # Remove edge and set to ->
@@ -965,29 +1209,38 @@ class Simulator:
                         mag.G.graph[i, j] = Endpoint.TAIL.value
                         mag.G.graph[j, i] = Endpoint.ARROW.value
         return mag
-    
+
     @staticmethod
     def edge_is_bidirected(edge: Edge) -> bool:
         """
-        Checks if edge is bidirected, i.e. <-> or <-> and ->/ <-. 
+        Checks if edge is bidirected, i.e. <-> or <-> and ->/ <-.
         """
-        if edge.get_endpoint1() == Endpoint.ARROW and edge.get_endpoint2() == Endpoint.ARROW:
+        if (
+            edge.get_endpoint1() == Endpoint.ARROW
+            and edge.get_endpoint2() == Endpoint.ARROW
+        ):
             return True
-        if edge.get_endpoint1() == Endpoint.TAIL_AND_ARROW and edge.get_endpoint2() == Endpoint.ARROW_AND_ARROW:
+        if (
+            edge.get_endpoint1() == Endpoint.TAIL_AND_ARROW
+            and edge.get_endpoint2() == Endpoint.ARROW_AND_ARROW
+        ):
             return True
-        if edge.get_endpoint1() == Endpoint.ARROW_AND_ARROW and edge.get_endpoint2() == Endpoint.TAIL_AND_ARROW:
+        if (
+            edge.get_endpoint1() == Endpoint.ARROW_AND_ARROW
+            and edge.get_endpoint2() == Endpoint.TAIL_AND_ARROW
+        ):
             return True
         return False
-    
+
     @staticmethod
     def get_nx_digraph_from_cdag_with_latents(dag):
-        '''
+        """
         Returns an nx_digraph containing only the directed edges from dag.
         Input:
             dag: CausalGraph object
         Output:
             nx_digraph: nx.DiGraph object
-        '''
+        """
         nx_dag = copy.deepcopy(dag)
         A = nx_dag.G.graph
         # # keep only directed edges with this formula
