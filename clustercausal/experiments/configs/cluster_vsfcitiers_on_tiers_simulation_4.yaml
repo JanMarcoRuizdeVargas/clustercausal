@@ -1,0 +1,52 @@
+# A sample yaml with all possible configs
+# Config settings: n_nodes, n_edges, dag_method, n_clusters, weight_range, lin_distribution_type, 
+#                 nonlin_distribution_type, scm_method, sample_size, seed, node_names, noise_scale
+
+# Should always be only one, will be popped away in ExperimentRunner
+discovery_alg : ['ClusterFCI']
+
+# Runs per unique configuration - how often each configuration gets simulated
+runs_per_configuration: 5
+
+# any integer between 2 and 50
+n_nodes: [15]
+
+# will not be exactly graph edges due to gcastle dag generator, might be less edges
+n_edges: [15, 20, 25]
+
+dag_method: ['erdos_renyi']
+
+n_clusters: [3, 4, 5]
+
+# approximate number of edges in C-DAG if cluster_method is 'cdag'
+n_c_edges: [4, 6]
+
+weight_range: 
+  - [-1,2]
+#['gauss', 'exp', 'gumbel']
+lin_distribution_type: ['gauss']
+#['mlp', 'mim', 'gp']
+nonlin_distribution_type: []
+#['mlp', 'mim', 'gp']
+#'mim', 
+scm_method: ['linear', 'nonlinear'] 
+
+sample_size: [1000]
+
+seed: [null]
+
+node_names: [null]
+
+noise_scale: [1]
+
+alpha: [0.05]
+
+# SID is very expensive to compute on large graphs
+sid: ['false']
+
+indep_test: ['fisherz']
+
+# Whether C-DAG or DAG is generated first, options: ['cdag', 'dag']
+# to run on tiers choose 'cdag'
+
+cluster_method: ['cdag']

@@ -67,6 +67,7 @@ class ExperimentRunner:
         self.config.pop("indep_test")
         self.runs_per_configuration = self.config["runs_per_configuration"]
         self.config.pop("runs_per_configuration")
+        self.cluster_method = self.config["cluster_method"][0]
 
         if "linear" in self.config["scm_method"]:
             self.linear_config = self.config.copy()
@@ -144,7 +145,10 @@ class ExperimentRunner:
         pass
         # Simulate DAG, remove nodes to get latent variables
         simulation = Simulator(**param_dict)
-        cluster_dag = simulation.run_with_latents()
+        if self.cluster_method == "dag":
+            cluster_dag = simulation.run_with_latents()
+        elif self.cluster_method == "cdag":
+            cluster_dag = simulation.run_with_tbk()
 
         nx_true_dag = Simulator.get_nx_digraph_from_cdag_with_latents(
             cluster_dag.true_dag
@@ -469,6 +473,9 @@ class ExperimentRunner:
 
         clust_no_indep_tests = cluster_alg.no_of_indep_tests_performed
         one_clust_no_indep_tests = one_cluster_alg.no_of_indep_tests_performed
+        fci_tiers_no_indep_tests = (
+            fcitiers_est_graph.no_of_indep_tests_performed
+        )
 
         settings_results = {
             "n_nodes": simulation.n_nodes,
@@ -491,6 +498,7 @@ class ExperimentRunner:
             "cluster_connectivity": cluster_connectivity,
             "Cluster indep tests": clust_no_indep_tests,
             "Base indep tests": one_clust_no_indep_tests,
+            "FCITiers indep tests": fci_tiers_no_indep_tests,
         }
         results = {
             "settings": settings_results,

@@ -262,3 +262,26 @@ def nx_to_causallearn_adjmat(adjmat: np.ndarray) -> np.ndarray:
                 causallearn_adjmat[i, j] = -1
                 causallearn_adjmat[j, i] = -1
     return causallearn_adjmat
+
+
+def metrics_in_readable_table(
+    simuldata: pd.DataFrame, algs: list, metrics: list
+) -> pd.DataFrame:
+    """
+    Transforms the saved dataframe into a more readable format,
+    putting metrics in rows and algorithms in columns.
+    Input:
+        - simuldata: pd.DataFrame
+        - algs: list of str, algorithm names
+        - metrics: list of str, metric names
+    Outputs:
+        - pd.DataFrame
+    """
+    mean_metrics = simuldata.mean(axis=0, numeric_only=True)
+
+    output_df = pd.DataFrame(columns=algs)
+    for alg in algs:
+        for metric in metrics:
+            output_df.loc[metric, alg] = mean_metrics[alg + "_" + metric]
+    output_df
+    return output_df

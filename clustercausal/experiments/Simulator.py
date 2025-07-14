@@ -291,7 +291,7 @@ class Simulator:
 
         return cluster_dag
 
-    def run_with_tbk(self, no_of_tiers=3) -> ClusterDAG:
+    def run_with_tbk(self) -> ClusterDAG:
         """
         Runs a cluster_dag that only has latent variables within a cluster,
         i.e. that satisfies tiered background knowledge.
@@ -308,12 +308,12 @@ class Simulator:
             node_names=None,
         )
         max_latents = self.n_edges // 2 + 1
-        # cluster_dag.cg.draw_pydot_graph()
         # Add latent variables between some nodes that are in same cluster
+        # to cluster_dag.true_dag
         latent_nodes = {}
         for cluster in cluster_dag.cluster_mapping.keys():
             node_ratio = len(cluster_dag.cluster_mapping[cluster]) / len(
-                cluster_dag.cg.G.get_nodes()
+                cluster_dag.true_dag.G.get_nodes()
             )
             max_latents_in_cluster = int(max_latents * node_ratio)
             non_adjacent_nodes = []
@@ -323,11 +323,11 @@ class Simulator:
             # First make list of tuples of potential candidates for latent variables
             for node_a_name in cluster_dag.cluster_mapping[cluster]:
                 node_a = ClusterDAG.get_node_by_name(
-                    node_a_name, cluster_dag.cg
+                    node_a_name, cluster_dag.true_dag
                 )
                 # Get non-adjacent node in cluster,
                 #  that is not in ancestor(node_a) or descendant(node_a)
-                neighbors_a = cluster_dag.cg.G.get_adjacent_nodes(node_a)
+                neighbors_a = cluster_dag.true_dag.G.get_adjacent_nodes(node_a)
                 neighbors_a_names = [node.get_name() for node in neighbors_a]
                 nonneighbors_a_names_in_cluster = list(
                     set(cluster_dag.cluster_mapping[cluster])
@@ -337,15 +337,15 @@ class Simulator:
                 #     f"Non-neighbors of {node_a.get_name()}: {nonneighbors_a_names_in_cluster}"
                 # )
                 nonneighbors_a_in_cluster = [
-                    ClusterDAG.get_node_by_name(name, cluster_dag.cg)
+                    ClusterDAG.get_node_by_name(name, cluster_dag.true_dag)
                     for name in nonneighbors_a_names_in_cluster
                 ]
 
                 # drop descendants or ancestors of node_a in neighbors_a_in_cluster
                 for node in nonneighbors_a_in_cluster:
-                    if cluster_dag.cg.G.is_descendant_of(
+                    if cluster_dag.true_dag.G.is_descendant_of(
                         node_a, node
-                    ) or cluster_dag.cg.G.is_ancestor_of(node_a, node):
+                    ) or cluster_dag.true_dag.G.is_ancestor_of(node_a, node):
                         nonneighbors_a_in_cluster.remove(node)
 
                 if len(nonneighbors_a_in_cluster) == 0:
@@ -375,104 +375,63 @@ class Simulator:
                 # print(
                 #     f"Adding latent variable {node_l.get_name()} between {node_a.get_name()} and {node_b.get_name()}"
                 # )
-                cluster_dag.cg.G.add_node(node_l)
+                cluster_dag.true_dag.G.add_node(node_l)
                 # add edges node_l -> node_a and node_l -> node_b
                 edge = Edge(node_l, node_a, Endpoint.TAIL, Endpoint.ARROW)
-                cluster_dag.cg.G.add_edge(edge)
+                cluster_dag.true_dag.G.add_edge(edge)
                 edge = Edge(node_l, node_b, Endpoint.TAIL, Endpoint.ARROW)
-                cluster_dag.cg.G.add_edge(edge)
+                cluster_dag.true_dag.G.add_edge(edge)
 
-            # ------------------------------
-            # # Create at maximum nodes/2 latent variables per cluster
-            # max_latents = int(
-            #     len(cluster_dag.cluster_mapping[cluster]) / 2 + 1
-            # )
-            # # for i in range(max_latents):
-            # #     # Get a random node in the cluster
-            # #     np.random.seed(self.seed)
-            # #     node_a_name = np.random.choice(
-            # #         cluster_dag.cluster_mapping[cluster],
-            # #         size=1,
-            # #         replace=False,
-            # #     )[0]
-            # node_a_names = np.random.choice(
-            #     cluster_dag.cluster_mapping[cluster],
-            #     size=max_latents,
-            #     replace=False,
-            # )
-            # for node_a_name in node_a_names:
-            #     node_a = ClusterDAG.get_node_by_name(
-            #         node_a_name, cluster_dag.cg
-            #     )
-            #     # Get non-adjacent node in cluster,
-            #     #  that is not in ancestor(node_a) or descendant(node_a)
-            #     neighbors_a = cluster_dag.cg.G.get_adjacent_nodes(node_a)
-            #     neighbors_a_names = [node.get_name() for node in neighbors_a]
-            #     neighbors_a_names_in_cluster = list(
-            #         set(neighbors_a_names)
-            #         & set(cluster_dag.cluster_mapping[cluster])
-            #     )
-            #     # neighbors_a_in_cluster = [
-            #     #     cluster_dag.cg.get_node_by_name(name)
-            #     #     for name in neighbors_a_names_in_cluster
-            #     # ]
-            #     neighbors_a_in_cluster = [
-            #         ClusterDAG.get_node_by_name(name, cluster_dag.cg)
-            #         for name in neighbors_a_names_in_cluster
-            #     ]
+        # Create new adjacency matrix including latents
+        seed = self.seed
+        weight_range = self.weight_range
+        n_nodes = len(cluster_dag.true_dag.G.get_nodes())
+        np.random.seed(seed)
+        weight_range_top = weight_range[1] - weight_range[0]
+        W = (
+            weight_range_top * np.random.rand(n_nodes, n_nodes)
+            + weight_range[0]
+        )
+        cluster_dag.true_dag.weighted_adjacency_matrix = np.zeros(
+            (n_nodes, n_nodes)
+        )
+        for i in range(n_nodes):
+            for j in range(n_nodes):
+                # set weight[i,j] if edge i-->j exists
+                if (
+                    cluster_dag.true_dag.G.graph[i, j] == -1
+                    and cluster_dag.true_dag.G.graph[j, i] == 1
+                ):
+                    cluster_dag.true_dag.weighted_adjacency_matrix[i, j] = W[
+                        i, j
+                    ]
 
-            #     # drop descendants or ancestors of node_a in neighbors_a_in_cluster
-            #     for node in neighbors_a_in_cluster:
-            #         if cluster_dag.cg.G.is_descendant_of(
-            #             node_a, node
-            #         ) or cluster_dag.cg.G.is_ancestor_of(node_a, node):
-            #             neighbors_a_in_cluster.remove(node)
-
-            #     # Choose node_b from remaining neighbors_a_in_cluster
-            #     if len(neighbors_a_in_cluster) == 0:
-            #         # No neighbors in cluster, so skip this iteration
-            #         continue
-            #     node_b = np.random.choice(
-            #         neighbors_a_in_cluster, size=1, replace=False
-            #     )[0]
-
-            #     # Create a latent variable between node_a and node_b
-            #     node_l = GraphNode(f"L{len(latent_nodes.keys())}")
-            #     latent_nodes[node_l] = (node_a, node_b)
-            #     print(
-            #         f"Adding latent variable {node_l.get_name()} between {node_a.get_name()} and {node_b.get_name()}"
-            #     )
-            #     cluster_dag.cg.G.add_node(node_l)
-            #     # add edges node_l -> node_a and node_l -> node_b
-            #     edge = Edge(node_l, node_a, Endpoint.TAIL, Endpoint.ARROW)
-            #     cluster_dag.cg.G.add_edge(edge)
-            #     edge = Edge(node_l, node_b, Endpoint.TAIL, Endpoint.ARROW)
-            #     cluster_dag.cg.G.add_edge(edge)
-        # ------------------------------
         # Generate data
+        # cluster_dag.true_dag.draw_pydot_graph()
         data = self.generate_data(
-            cluster_dag.cg,
+            cluster_dag.true_dag,
             self.sample_size,
             self.distribution_type,
             self.scm_method,
             self.noise_scale,
         )
         cluster_dag.data = data
+        # print(f"Data shape, incl. latents:{data.shape}")
 
         # Remove the latent variables from the cluster_dag and add bidirected edges
         for node_l in latent_nodes.keys():
-            cluster_dag.cg.G.remove_node(node_l)
+            cluster_dag.true_dag.G.remove_node(node_l)
             node_a, node_b = latent_nodes[node_l]
             edge = Edge(node_a, node_b, Endpoint.ARROW, Endpoint.ARROW)
-            cluster_dag.cg.G.add_edge(edge)
+            cluster_dag.true_dag.G.add_edge(edge)
 
         # Remove the latent variables from the data
         cluster_dag.data = np.delete(
             cluster_dag.data, np.s_[-len(latent_nodes) :], axis=1
         )
 
-        # update true_dag
-        cluster_dag.true_dag = cluster_dag.cg
+        # Get MAG for evaluation
+        cluster_dag.true_mag = self.get_mag(cluster_dag.true_dag)
 
         return cluster_dag
 
@@ -620,7 +579,7 @@ class Simulator:
                     cluster_graph.G.graph[j, i] = 1
 
         if node_names is None:
-            node_names = [f"X{i}" for i in range(n_nodes)]
+            node_names = [f"X{i + 1}" for i in range(n_nodes)]
         # Partition nodes into clusters
         node_range = list(range(1, n_nodes))
         cluster_cutoffs = sorted(
@@ -668,11 +627,13 @@ class Simulator:
         # Probability of keeping edges, influenced by n_edges
         # p_intra = 3 * (n_edges / (n_nodes * (n_nodes - 1)))
         # p_inter = 1.5 * (n_edges / (n_nodes * (n_nodes - 1)))
+
+        # get the MPDAG as basis to generate the true_dag from
         cluster_dag.cdag_to_mpdag()
         cluster_dag.true_dag = cluster_dag.cg
 
         # get number of MPDAG edges to controll edge dropout probability
-        no_of_mpdag_edges = len(cluster_dag.cg.G.get_graph_edges())
+        no_of_mpdag_edges = len(cluster_dag.true_dag.G.get_graph_edges())
         # print(f"Number of MPDAG edges: {no_of_mpdag_edges}")
         p_intra = n_edges / no_of_mpdag_edges
         p_inter = n_edges / no_of_mpdag_edges
