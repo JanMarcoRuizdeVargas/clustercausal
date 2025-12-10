@@ -9,7 +9,7 @@
 discovery_alg : ['ClusterFCI']
 
 # Runs per unique configuration - how often each configuration gets simulated
-runs_per_configuration: 5
+runs_per_configuration: 10
 
 # any integer between 2 and 50
 n_nodes: [15]
