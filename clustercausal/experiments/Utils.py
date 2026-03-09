@@ -4,7 +4,6 @@ import os
 import pickle
 import pandas as pd
 from clustercausal.utils.Utils import load_data
-from clustercausal.experiments.ExperimentRunner import ExperimentRunner
 
 
 def load_experiment_folder(directory):

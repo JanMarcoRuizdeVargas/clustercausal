@@ -123,6 +123,16 @@ class ExperimentRunner:
                     self.run_i += 1
                     self.run_experiment(params)
 
+        file_path = os.path.join(
+            "clustercausal", "experiments", "_results", self.gridsearch_name
+        )
+        # read the results and save them to a pkl dataframe for later analysis
+        print("Saving results to pkl dataframe in ")
+        data = load_data(file_path)
+        data.to_pickle(
+            f"clustercausal\experiments\_results_dataframes_for_simulations\{self.gridsearch_name}.pkl"
+        )
+
     def run_experiment(self, params):
         """
         Run an experiment
@@ -247,18 +257,19 @@ class ExperimentRunner:
             true_dag=nx_true_dag,
         )
 
-        # Run FCITiers
-        tiers = cluster_dag.get_cluster_topological_ordering()
-        cluster_mapping = cluster_dag.cluster_mapping
-        fcitiers_est_graph, fcitiers_edges = fci_tiers(
-            tiers=tiers,
-            cluster_mapping=cluster_mapping,
-            cdag=cluster_dag,
-            dataset=cluster_dag.data,
-            alpha=param_dict["alpha"],
-            verbose=False,
-            show_progress=False,
-        )
+        # # Run FCITiers
+        # tiers = cluster_dag.get_cluster_topological_ordering()
+        # cluster_mapping = cluster_dag.cluster_mapping
+        # fcitiers_est_graph, fcitiers_edges = fci_tiers(
+        #     tiers=tiers,
+        #     cluster_mapping=cluster_mapping,
+        #     cdag=cluster_dag,
+        #     dataset=cluster_dag.data,
+        #     alpha=param_dict["alpha"],
+        #     verbose=False,
+        #     show_progress=False,
+        # )
+        fcitiers_est_graph = None
 
         self.evaluate_and_save_results(
             simulation,
@@ -359,27 +370,28 @@ class ExperimentRunner:
         }
 
         # evaluate fci tiers
-        fcitiers_evaluation = Evaluator(
-            truth=cluster_dag.true_dag.G, est=fcitiers_est_graph.G
-        )
-        (
-            fcitiers_adjacency_confusion,
-            fcitiers_arrow_confusion,
-            fcitiers_shd,
-            fcitiers_sid,
-        ) = fcitiers_evaluation.get_causallearn_metrics(sid=self.sid)
-        fcitiers_adjacency_confusion = {
-            f"adj_{k}": v for k, v in fcitiers_adjacency_confusion.items()
-        }
-        fcitiers_arrow_confusion = {
-            f"arrow_{k}": v for k, v in fcitiers_arrow_confusion.items()
-        }
-        fcitiers_evaluation_results = {
-            **fcitiers_adjacency_confusion,
-            **fcitiers_arrow_confusion,
-            "fcitiers_shd": fcitiers_shd,
-            **fcitiers_sid,
-        }
+        if fcitiers_est_graph is not None:
+            fcitiers_evaluation = Evaluator(
+                truth=cluster_dag.true_dag.G, est=fcitiers_est_graph.G
+            )
+            (
+                fcitiers_adjacency_confusion,
+                fcitiers_arrow_confusion,
+                fcitiers_shd,
+                fcitiers_sid,
+            ) = fcitiers_evaluation.get_causallearn_metrics(sid=self.sid)
+            fcitiers_adjacency_confusion = {
+                f"adj_{k}": v for k, v in fcitiers_adjacency_confusion.items()
+            }
+            fcitiers_arrow_confusion = {
+                f"arrow_{k}": v for k, v in fcitiers_arrow_confusion.items()
+            }
+            fcitiers_evaluation_results = {
+                **fcitiers_adjacency_confusion,
+                **fcitiers_arrow_confusion,
+                "fcitiers_shd": fcitiers_shd,
+                **fcitiers_sid,
+            }
 
         edge_ratios = cluster_dag.get_cluster_connectedness()
         edge_ratios = [
@@ -423,10 +435,11 @@ class ExperimentRunner:
             k: numpy_to_python(v)
             for k, v in pruned_base_evaluation_results.items()
         }
-        fcitiers_evaluation_results = {
-            k: numpy_to_python(v)
-            for k, v in fcitiers_evaluation_results.items()
-        }
+        if fcitiers_est_graph is not None:
+            fcitiers_evaluation_results = {
+                k: numpy_to_python(v)
+                for k, v in fcitiers_evaluation_results.items()
+            }
 
         if self.sid:
             true_sid_bounds_eval = Evaluator(
@@ -473,9 +486,10 @@ class ExperimentRunner:
 
         clust_no_indep_tests = cluster_alg.no_of_indep_tests_performed
         one_clust_no_indep_tests = one_cluster_alg.no_of_indep_tests_performed
-        fci_tiers_no_indep_tests = (
-            fcitiers_est_graph.no_of_indep_tests_performed
-        )
+        if fcitiers_est_graph is not None:
+            fci_tiers_no_indep_tests = (
+                fcitiers_est_graph.no_of_indep_tests_performed
+            )
 
         settings_results = {
             "n_nodes": simulation.n_nodes,
@@ -498,15 +512,20 @@ class ExperimentRunner:
             "cluster_connectivity": cluster_connectivity,
             "Cluster indep tests": clust_no_indep_tests,
             "Base indep tests": one_clust_no_indep_tests,
-            "FCITiers indep tests": fci_tiers_no_indep_tests,
+            # "FCITiers indep tests": fci_tiers_no_indep_tests,
         }
         results = {
             "settings": settings_results,
             "cluster_evaluation_results": cluster_evaluation_results,
             "base_evaluation_results": base_evaluation_results,
             "pruned_base_evaluation_results": pruned_base_evaluation_results,
-            "fcitiers_evaluation_results": fcitiers_evaluation_results,
+            # "fcitiers_evaluation_results": fcitiers_evaluation_results,
         }
+        if fcitiers_est_graph is not None:
+            settings_results["FCITiers indep tests"] = fci_tiers_no_indep_tests
+            results["fcitiers_evaluation_results"] = (
+                fcitiers_evaluation_results
+            )
 
         file_name = "results.yaml"
         sub_path = os.path.join(file_path, file_name)

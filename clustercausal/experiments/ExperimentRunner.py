@@ -199,8 +199,7 @@ class ExperimentRunner:
 
     def run_pc_experiment(self, param_dict):
         """
-        Run an experiment with PC
-        # TODO add different independence tests
+        Run an experiment with PC.
         """
         # run simulation
         simulation = Simulator(**param_dict)
