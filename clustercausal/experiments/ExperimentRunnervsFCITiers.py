@@ -9,6 +9,7 @@ import pickle
 import networkx as nx
 import copy
 import logging
+from joblib import Parallel, delayed
 
 from causallearn.search.ConstraintBased.PC import pc
 from causallearn.search.ConstraintBased.FCI import fci
@@ -20,6 +21,7 @@ from clustercausal.experiments.Simulator import Simulator
 from clustercausal.experiments.Evaluator import Evaluator
 from clustercausal.algorithms.ClusterPC import ClusterPC
 from clustercausal.algorithms.ClusterFCI import ClusterFCI
+from clustercausal.algorithms.kPC import kpc
 from clustercausal.utils.Utils import *
 from clustercausal.algorithms.FCITiers import fci_tiers
 
@@ -105,26 +107,46 @@ class ExperimentRunner:
         Run experiments with a grid of configurations
         """
         self.gridsearch_name = f"{self.discovery_alg[0]}_{str(datetime.datetime.now()).replace(':', '-')}"
-
+        n_jobs = 4
         if self.linear_config is not None:
             lin_param_configuration = list(
                 itertools.product(*self.linear_config.values())
             )
+            # for params in lin_param_configuration:
+            #     self.run_i = 0
+            #     for i in range(self.runs_per_configuration):
+            #         self.run_i += 1
+            #         self.run_experiment(params)
+            runs = []
             for params in lin_param_configuration:
-                self.run_i = 0
-                for i in range(self.runs_per_configuration):
-                    self.run_i += 1
-                    self.run_experiment(params)
+                for run_i in range(1, self.runs_per_configuration + 1):
+                    runs.append((params, run_i))
+
+            # Parallel execution across cores
+            Parallel(n_jobs=n_jobs, verbose=10)(
+                delayed(self._run_and_track)(params, run_i)
+                for params, run_i in runs
+            )
 
         if self.nonlinear_config is not None:
             nonlin_param_configuration = list(
                 itertools.product(*self.nonlinear_config.values())
             )
+            # for params in nonlin_param_configuration:
+            #     self.run_i = 0
+            #     for i in range(self.runs_per_configuration):
+            #         self.run_i += 1
+            #         self.run_experiment(params)
+            runs = []
             for params in nonlin_param_configuration:
-                self.run_i = 0
-                for i in range(self.runs_per_configuration):
-                    self.run_i += 1
-                    self.run_experiment(params)
+                for run_i in range(1, self.runs_per_configuration + 1):
+                    runs.append((params, run_i))
+
+            # Parallel execution across cores
+            Parallel(n_jobs=n_jobs, verbose=10)(
+                delayed(self._run_and_track)(params, run_i)
+                for params, run_i in runs
+            )
 
         file_path = os.path.join(
             "clustercausal", "experiments", "_results", self.gridsearch_name
@@ -135,6 +157,10 @@ class ExperimentRunner:
         data.to_pickle(
             f"clustercausal\experiments\_results_dataframes_for_simulations\{self.gridsearch_name}.pkl"
         )
+
+    def _run_and_track(self, params, run_i):
+        self.run_i = run_i
+        self.run_experiment(params)
 
     def run_experiment(self, params):
         """
@@ -270,6 +296,15 @@ class ExperimentRunner:
             true_dag=nx_true_dag,
         )
         logging.info("Finished PC. ")
+        # kpc_est_graph = kpc(
+        #     cluster_dag.data,
+        #     k=2,
+        #     alpha=param_dict["alpha"],
+        #     indep_test=self.indep_test,
+        #     verbose=False,
+        #     show_progress=False,
+        #     true_dag=nx_true_dag,
+        # )
 
         # # Run FCITiers
         # tiers = cluster_dag.get_cluster_topological_ordering()

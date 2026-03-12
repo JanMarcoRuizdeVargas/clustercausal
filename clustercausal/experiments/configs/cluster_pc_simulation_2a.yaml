@@ -33,7 +33,7 @@ nonlin_distribution_type: ['mlp', 'gp']
 #'mim', 
 scm_method: ['linear', 'nonlinear'] 
 
-sample_size: [1000]
+sample_size: [2000]
 
 seed: [null]
 
@@ -47,6 +47,7 @@ alpha: [0.01, 0.05, 0.1, 0.25, 0.5]
 sid: ['false']
 
 indep_test: ['fisherz']
+# indep_test: ['kci']
 
 # Whether C-DAG or DAG is generated first, options: ['cdag', 'dag']
 cluster_method: ['dag']

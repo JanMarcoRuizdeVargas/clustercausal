@@ -22,7 +22,6 @@ if __name__ == "__main__":
     config_path = (
         "clustercausal\experiments\configs\cluster_pc_simulation_2a.yaml"
     )
-    config_path = "clustercausal\experiments\configs\cluster_vsfcitiers_simulation_3a.yaml"
     config_path = config_path.replace("\\", "/")
     experiment = ExperimentRunner(config_path)
     experiment.run_gridsearch_experiment()
