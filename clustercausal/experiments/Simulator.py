@@ -4,8 +4,9 @@ import numpy as np
 import itertools
 import networkx as nx
 import copy
+from collections import deque
 
-from typing import List
+from typing import List, Dict, Set, Optional
 
 from causallearn.graph.GraphClass import CausalGraph
 from causallearn.graph.Endpoint import Endpoint
@@ -251,8 +252,6 @@ class Simulator:
                     # dag.G.add_edge(edge)
                     dag.G.graph[a, b] = Endpoint.ARROW_AND_ARROW.value
                     dag.G.graph[b, a] = Endpoint.TAIL_AND_ARROW.value
-                # Check for cycles
-                topo_order = self.get_topological_ordering(dag)
             remove_nodes.append(node_i)
         # Remove nodes
         for node in remove_nodes:
@@ -287,7 +286,8 @@ class Simulator:
         cluster_dag.data = data
 
         # Get MAG for evaluation
-        cluster_dag.true_mag = self.get_mag(cluster_dag.true_dag)
+        # cluster_dag.true_mag = self.get_mag(cluster_dag.true_dag)
+        cluster_dag.true_mag = self.get_mag_fast(cluster_dag.true_dag)
 
         return cluster_dag
 
@@ -1169,6 +1169,197 @@ class Simulator:
                         mag.G.remove_edge(edge)
                         mag.G.graph[i, j] = Endpoint.TAIL.value
                         mag.G.graph[j, i] = Endpoint.ARROW.value
+        return mag
+
+    @staticmethod
+    def get_mag_fast(
+        dag: CausalGraph, max_path_length: Optional[int] = None
+    ) -> CausalGraph:
+        """
+        Faster MAG construction based on existence search with pruning,
+        avoiding explicit enumeration of all bidirected/collider paths.
+        """
+        mag = copy.deepcopy(dag)
+
+        nodes = list(mag.G.nodes)
+        node_to_idx = {node: idx for idx, node in enumerate(nodes)}
+        n_nodes = len(nodes)
+
+        ancestors_dict: Dict[Node, Set[Node]] = {}
+        parents_dict: Dict[Node, Set[Node]] = {}
+        children_dict: Dict[Node, Set[Node]] = {}
+        for node in nodes:
+            ancestors: List[Node] = []
+            mag.G.collect_ancestors(node, ancestors)
+            ancestors_dict[node] = set(ancestors)
+            parents_dict[node] = set(mag.G.get_parents(node))
+            children_dict[node] = set(mag.G.get_children(node))
+
+        bidir_neighbors_idx: Dict[int, Set[int]] = {
+            idx: set() for idx in range(n_nodes)
+        }
+        for edge in mag.G.get_graph_edges():
+            if not Simulator.edge_is_bidirected(edge):
+                continue
+            node1 = edge.get_node1()
+            node2 = edge.get_node2()
+            idx1 = node_to_idx[node1]
+            idx2 = node_to_idx[node2]
+            bidir_neighbors_idx[idx1].add(idx2)
+            bidir_neighbors_idx[idx2].add(idx1)
+
+        if max_path_length is None:
+            max_nodes_in_path = n_nodes
+        else:
+            max_nodes_in_path = max(2, min(max_path_length, n_nodes))
+
+        def exists_bidir_path(
+            core_start: Node,
+            core_end: Node,
+            allowed_internal: Set[Node],
+            min_nodes_in_path: int,
+            blocked_endpoints: Set[Node],
+            require_core_start_internal: bool,
+            require_core_end_internal: bool,
+        ) -> bool:
+            if (
+                core_start in blocked_endpoints
+                or core_end in blocked_endpoints
+            ):
+                return False
+
+            if (
+                require_core_start_internal
+                and core_start not in allowed_internal
+            ):
+                return False
+            if require_core_end_internal and core_end not in allowed_internal:
+                return False
+
+            if core_start == core_end and min_nodes_in_path > 1:
+                return False
+
+            start_idx = node_to_idx[core_start]
+            end_idx = node_to_idx[core_end]
+
+            blocked_idx_mask = 0
+            for blocked_node in blocked_endpoints:
+                blocked_idx_mask |= 1 << node_to_idx[blocked_node]
+
+            allowed_internal_idx = {
+                node_to_idx[node]
+                for node in allowed_internal
+                if node in node_to_idx
+            }
+
+            stack = deque([(start_idx, 1 << start_idx, 1)])
+            while stack:
+                current_idx, visited_mask, path_len = stack.pop()
+
+                if current_idx == end_idx:
+                    if path_len >= min_nodes_in_path:
+                        return True
+                    continue
+
+                if path_len >= max_nodes_in_path:
+                    continue
+
+                for next_idx in bidir_neighbors_idx[current_idx]:
+                    next_bit = 1 << next_idx
+                    if visited_mask & next_bit:
+                        continue
+                    if blocked_idx_mask & next_bit:
+                        continue
+                    if (
+                        next_idx != end_idx
+                        and next_idx not in allowed_internal_idx
+                    ):
+                        continue
+
+                    stack.append(
+                        (next_idx, visited_mask | next_bit, path_len + 1)
+                    )
+
+            return False
+
+        for start_node in nodes:
+            for end_node in nodes:
+                if start_node == end_node:
+                    continue
+
+                allowed_internal = ancestors_dict[start_node].union(
+                    ancestors_dict[end_node]
+                )
+
+                inducing_path_exists = exists_bidir_path(
+                    core_start=start_node,
+                    core_end=end_node,
+                    allowed_internal=allowed_internal,
+                    min_nodes_in_path=3,
+                    blocked_endpoints=set(),
+                    require_core_start_internal=False,
+                    require_core_end_internal=False,
+                )
+
+                if not inducing_path_exists:
+                    for core_start in children_dict[start_node]:
+                        if exists_bidir_path(
+                            core_start=core_start,
+                            core_end=end_node,
+                            allowed_internal=allowed_internal,
+                            min_nodes_in_path=2,
+                            blocked_endpoints={start_node},
+                            require_core_start_internal=True,
+                            require_core_end_internal=False,
+                        ):
+                            inducing_path_exists = True
+                            break
+
+                if not inducing_path_exists:
+                    for core_end in children_dict[end_node]:
+                        if exists_bidir_path(
+                            core_start=start_node,
+                            core_end=core_end,
+                            allowed_internal=allowed_internal,
+                            min_nodes_in_path=2,
+                            blocked_endpoints={end_node},
+                            require_core_start_internal=False,
+                            require_core_end_internal=True,
+                        ):
+                            inducing_path_exists = True
+                            break
+
+                if not inducing_path_exists:
+                    continue
+
+                i = mag.G.node_map[start_node]
+                j = mag.G.node_map[end_node]
+                if start_node in ancestors_dict[end_node]:
+                    mag.G.graph[i, j] = Endpoint.TAIL.value
+                    mag.G.graph[j, i] = Endpoint.ARROW.value
+                elif end_node in ancestors_dict[start_node]:
+                    mag.G.graph[i, j] = Endpoint.ARROW.value
+                    mag.G.graph[j, i] = Endpoint.TAIL.value
+                else:
+                    mag.G.graph[i, j] = Endpoint.ARROW.value
+                    mag.G.graph[j, i] = Endpoint.ARROW.value
+
+        for node in mag.G.nodes:
+            ancestors: List[Node] = []
+            mag.G.collect_ancestors(node, ancestors)
+            for ancestor in ancestors:
+                edge = mag.G.get_edge(ancestor, node)
+                if edge:
+                    if (
+                        edge.get_endpoint1() == Endpoint.TAIL_AND_ARROW
+                        and edge.get_endpoint2() == Endpoint.ARROW_AND_ARROW
+                    ):
+                        i = mag.G.node_map[ancestor]
+                        j = mag.G.node_map[node]
+                        mag.G.remove_edge(edge)
+                        mag.G.graph[i, j] = Endpoint.TAIL.value
+                        mag.G.graph[j, i] = Endpoint.ARROW.value
+
         return mag
 
     @staticmethod

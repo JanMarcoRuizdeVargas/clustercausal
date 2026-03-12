@@ -8,6 +8,7 @@ import numpy as np
 import pickle
 import networkx as nx
 import copy
+import logging
 
 from causallearn.search.ConstraintBased.PC import pc
 from causallearn.search.ConstraintBased.FCI import fci
@@ -26,6 +27,8 @@ os.environ["R_HOME"] = (
     "C:\Program Files\R\R-4.3.1"  # replace with the actual R home directory
 )
 import rpy2.robjects as robjects
+
+logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
 
 class ExperimentRunner:
@@ -153,16 +156,18 @@ class ExperimentRunner:
         Run an experiment with FCI
         """
         pass
+        logging.info("Starting FCI experiment. ")
         # Simulate DAG, remove nodes to get latent variables
         simulation = Simulator(**param_dict)
         if self.cluster_method == "dag":
             cluster_dag = simulation.run_with_latents()
         elif self.cluster_method == "cdag":
             cluster_dag = simulation.run_with_tbk()
-
+        logging.info("Finished DAG and data generation. ")
         nx_true_dag = Simulator.get_nx_digraph_from_cdag_with_latents(
             cluster_dag.true_dag
         )
+        logging.info("Finished nx true C-DAG. ")
 
         # cluster_dag_nx = copy.deepcopy(cluster_dag)
         # A = cluster_dag_nx.true_dag.G.graph
@@ -184,6 +189,7 @@ class ExperimentRunner:
             verbose=False,
             show_progress=False,
         )
+        logging.info("Finished Cluster-FCI. ")
 
         cluster_est_graph, cluster_edges = cluster_fci.run()
 
@@ -196,6 +202,7 @@ class ExperimentRunner:
         )
         base_est_graph = CausalGraph(len(base_G.get_node_names()))
         base_est_graph.G = base_G
+        logging.info("Finished FCI. ")
 
         # Run FCITiers
         tiers = cluster_dag.get_cluster_topological_ordering()
@@ -209,6 +216,7 @@ class ExperimentRunner:
             verbose=False,
             show_progress=False,
         )
+        logging.info("Finished FCITiers. ")
 
         # Refactor the Evaluator into its own function and call it here
         cluster_dag.true_dag = (
@@ -225,6 +233,7 @@ class ExperimentRunner:
             cluster_fci,
             param_dict,
         )
+        logging.info("Evaluated and saved results. ")
 
     def run_pc_experiment(self, param_dict):
         """
@@ -232,12 +241,15 @@ class ExperimentRunner:
         # TODO add different independence tests
         """
         # run simulation
+        logging.info("Starting PC experiment. ")
         simulation = Simulator(**param_dict)
         cluster_dag = simulation.run()
         # run causal discovery
         # Set independence test
+        logging.info("Finished DAG and data generation. ")
         cluster_dag.true_dag.to_nx_graph()
         nx_true_dag = cluster_dag.true_dag.nx_graph
+        logging.info("Finished nx true C-DAG. ")
         cluster_pc = ClusterPC(
             cdag=cluster_dag,
             data=cluster_dag.data,
@@ -247,6 +259,7 @@ class ExperimentRunner:
             show_progress=False,
             true_dag=nx_true_dag,
         )
+        logging.info("Finished Cluster-PC. ")
         cluster_est_graph = cluster_pc.run()
         base_est_graph = pc(
             cluster_dag.data,
@@ -256,6 +269,7 @@ class ExperimentRunner:
             show_progress=False,
             true_dag=nx_true_dag,
         )
+        logging.info("Finished PC. ")
 
         # # Run FCITiers
         # tiers = cluster_dag.get_cluster_topological_ordering()
@@ -269,6 +283,7 @@ class ExperimentRunner:
         #     verbose=False,
         #     show_progress=False,
         # )
+        # logging.info('Finished FCI-Tiers. ')
         fcitiers_est_graph = None
 
         self.evaluate_and_save_results(
@@ -281,6 +296,7 @@ class ExperimentRunner:
             cluster_pc,
             param_dict,
         )
+        logging.info("Evaluated and saved results. ")
 
     def evaluate_and_save_results(
         self,
