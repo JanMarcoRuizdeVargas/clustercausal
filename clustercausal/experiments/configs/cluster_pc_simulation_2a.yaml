@@ -15,7 +15,8 @@ runs_per_configuration: 1
 n_nodes: [15]
 
 # will not be exactly graph edges due to gcastle dag generator, might be less edges
-n_edges: [15, 30, 50, 80]
+# n_edges: [15, 30, 50, 80]
+n_edges: [15, 30, 50]
 
 dag_method: ['erdos_renyi', 'scale_free', 'hierarchical']
 
@@ -26,10 +27,11 @@ n_c_edges: [4]
 weight_range: 
   - [-1,2]
 #['gauss', 'exp', 'gumbel']
-lin_distribution_type: ['logistic']
+lin_distribution_type: []
+# lin_distribution_type: ['logistic']
 #['mlp', 'mim', 'gp']
-nonlin_distribution_type: ['mlp', 'gp']
-#['mlp', 'mim', 'gp']
+nonlin_distribution_type: ['quadratic']
+#['mlp', 'mim', 'gp, quadratic']
 #'mim', 
 scm_method: ['linear', 'nonlinear'] 
 

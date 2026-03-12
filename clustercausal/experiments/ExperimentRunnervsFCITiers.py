@@ -11,6 +11,18 @@ import copy
 import logging
 from joblib import Parallel, delayed
 
+
+def _worker_init():
+    """Set single-threaded mode for numpy/scipy/OpenMP inside each joblib worker.
+    This prevents the fork+threads deadlock that occurs when MLP-based SCMs
+    spawn internal threads inside forked worker processes."""
+    os.environ["OMP_NUM_THREADS"] = "1"
+    os.environ["OPENBLAS_NUM_THREADS"] = "1"
+    os.environ["MKL_NUM_THREADS"] = "1"
+    os.environ["NUMEXPR_NUM_THREADS"] = "1"
+    os.environ["NUMBA_NUM_THREADS"] = "1"
+
+
 from causallearn.search.ConstraintBased.PC import pc
 from causallearn.search.ConstraintBased.FCI import fci
 from causallearn.graph.GeneralGraph import GeneralGraph
@@ -58,6 +70,7 @@ class ExperimentRunner:
         """
         with open(config_path, "r") as file:
             self.config = yaml.safe_load(file)
+        self.config_label = os.path.basename(config_path).split(".")[0]
         self.discovery_alg = self.config["discovery_alg"]
         self.config.pop("discovery_alg")
         if self.config["sid"] == ["true"]:
@@ -102,12 +115,17 @@ class ExperimentRunner:
         )
         print(f"Number of experiments: {num_experiments}")
 
-    def run_gridsearch_experiment(self):
+    def run_gridsearch_experiment(self, n_jobs=1):
         """
-        Run experiments with a grid of configurations
+        Run experiments with a grid of configurations.
+
+        Args:
+            n_jobs (int): Number of parallel workers. Values > 1 require
+                          the loky backend (default). Each worker is
+                          initialised with single-threaded numpy/OpenMP to
+                          avoid the fork+threads deadlock caused by MLP SCMs.
         """
-        self.gridsearch_name = f"{self.discovery_alg[0]}_{str(datetime.datetime.now()).replace(':', '-')}"
-        n_jobs = 4
+        self.gridsearch_name = f"{self.discovery_alg[0]}_{str(datetime.datetime.now()).replace(':', '-')}_{self.config_label}"
         if self.linear_config is not None:
             lin_param_configuration = list(
                 itertools.product(*self.linear_config.values())
@@ -122,8 +140,15 @@ class ExperimentRunner:
                 for run_i in range(1, self.runs_per_configuration + 1):
                     runs.append((params, run_i))
 
-            # Parallel execution across cores
-            Parallel(n_jobs=n_jobs, verbose=10)(
+            # Parallel execution across cores.
+            # initializer=_worker_init restricts internal threading inside each
+            # forked worker, preventing the MLP + OpenMP deadlock.
+            Parallel(
+                n_jobs=n_jobs,
+                verbose=10,
+                backend="loky",
+                initializer=_worker_init,
+            )(
                 delayed(self._run_and_track)(params, run_i)
                 for params, run_i in runs
             )
@@ -132,18 +157,18 @@ class ExperimentRunner:
             nonlin_param_configuration = list(
                 itertools.product(*self.nonlinear_config.values())
             )
-            # for params in nonlin_param_configuration:
-            #     self.run_i = 0
-            #     for i in range(self.runs_per_configuration):
-            #         self.run_i += 1
-            #         self.run_experiment(params)
             runs = []
             for params in nonlin_param_configuration:
                 for run_i in range(1, self.runs_per_configuration + 1):
                     runs.append((params, run_i))
 
-            # Parallel execution across cores
-            Parallel(n_jobs=n_jobs, verbose=10)(
+            # Parallel execution across cores.
+            Parallel(
+                n_jobs=n_jobs,
+                verbose=10,
+                backend="loky",
+                initializer=_worker_init,
+            )(
                 delayed(self._run_and_track)(params, run_i)
                 for params, run_i in runs
             )

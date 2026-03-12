@@ -9,32 +9,31 @@
 discovery_alg : ['ClusterPC']
 
 # Runs per unique configuration - how often each configuration gets simulated
-runs_per_configuration: 10
+runs_per_configuration: 1
 
 # any integer between 2 and 50
-n_nodes: [15]
+n_nodes: [15, 20, 30]
 
 # will not be exactly graph edges due to gcastle dag generator, might be less edges
 n_edges: [15, 30, 50, 80]
 
-dag_method: ['erdos_renyi']
+dag_method: ['erdos_renyi', 'scale_free', 'hierarchical']
 
-n_clusters: [1, 2, 3, 4, 5, 6, 7]
-
+n_clusters: [1, 2, 3, 4, 5, 6]
 # approximate number of edges in C-DAG if cluster_method is 'cdag'
 n_c_edges: [4]
 
 weight_range: 
   - [-1,2]
 #['gauss', 'exp', 'gumbel']
-lin_distribution_type: ['gauss']
+lin_distribution_type: ['gauss', 'exp', 'gumbel', 'logistic']
 #['mlp', 'mim', 'gp']
-nonlin_distribution_type: []
+nonlin_distribution_type: ['mim']
 #['mlp', 'mim', 'gp']
 #'mim', 
 scm_method: ['linear', 'nonlinear'] 
 
-sample_size: [1000]
+sample_size: [300, 1000, 3000]
 
 seed: [null]
 
