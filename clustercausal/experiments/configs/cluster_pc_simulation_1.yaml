@@ -15,7 +15,7 @@ runs_per_configuration: 10
 n_nodes: [15]
 
 # will not be exactly graph edges due to gcastle dag generator, might be less edges
-n_edges: [15, 30, 50, 80]
+n_edges: [15, 30, 50, 80, 150]
 
 dag_method: ['erdos_renyi']
 

@@ -2,6 +2,7 @@ import causallearn
 import yaml
 import itertools
 import os
+import secrets
 import time
 import datetime
 import numpy as np
@@ -483,6 +484,7 @@ class ExperimentRunner:
             + f"_{param_dict['distribution_type']}"
             + f"_run{self.run_i}_"
             + str(datetime.datetime.now().strftime("%H-%M-%S-%f")[:-3])
+            + f"_{secrets.token_hex(4)}"
         )
         file_path = os.path.join(
             "clustercausal",

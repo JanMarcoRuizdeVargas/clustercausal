@@ -12,10 +12,10 @@ discovery_alg : ['ClusterPC']
 runs_per_configuration: 1
 
 # any integer between 2 and 50
-n_nodes: [15, 20, 30]
+n_nodes: [15, 20, 25]
 
 # will not be exactly graph edges due to gcastle dag generator, might be less edges
-n_edges: [15, 30, 50, 80]
+n_edges: [25, 30, 50, 80]
 
 dag_method: ['erdos_renyi', 'scale_free', 'hierarchical']
 
@@ -41,7 +41,8 @@ node_names: [null]
 
 noise_scale: [1]
 
-alpha: [0.01, 0.05, 0.1, 0.25, 0.5]
+# alpha: [0.01, 0.05, 0.1, 0.25, 0.5]
+alpha: [0.05]
 
 # SID is very expensive to compute on large graphs
 sid: ['false']

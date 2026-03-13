@@ -426,9 +426,11 @@ class Simulator:
             cluster_dag.true_dag.G.add_edge(edge)
 
         # Remove the latent variables from the data
-        cluster_dag.data = np.delete(
-            cluster_dag.data, np.s_[-len(latent_nodes) :], axis=1
-        )
+        n_latents = len(latent_nodes)
+        if n_latents > 0:
+            cluster_dag.data = np.delete(
+                cluster_dag.data, np.s_[-n_latents:], axis=1
+            )
 
         # Get MAG for evaluation
         cluster_dag.true_mag = self.get_mag(cluster_dag.true_dag)
