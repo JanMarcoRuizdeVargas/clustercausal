@@ -30,6 +30,7 @@ from causallearn.graph.GeneralGraph import GeneralGraph
 
 from cdt.metrics import SID, SID_CPDAG, get_CPDAG
 
+from clustercausal.algorithms.kPC import kpc
 from clustercausal.experiments.Simulator import Simulator
 from clustercausal.experiments.Evaluator import Evaluator
 from clustercausal.algorithms.ClusterPC import ClusterPC
@@ -345,7 +346,18 @@ class ExperimentRunner:
         #     show_progress=False,
         # )
         # logging.info('Finished FCI-Tiers. ')
-        fcitiers_est_graph = None
+        # fcitiers_est_graph = None
+
+        # use FCItiers to 'inject' kpc in the hackiest way imaginable
+        kpc_est_graph = kpc(
+            cluster_dag.data,
+            k=2,
+            alpha=param_dict["alpha"],
+            indep_test=self.indep_test,
+            verbose=False,
+            show_progress=False,
+            true_dag=nx_true_dag,
+        )
 
         self.evaluate_and_save_results(
             simulation,
@@ -353,7 +365,7 @@ class ExperimentRunner:
             nx_true_dag,
             cluster_est_graph,
             base_est_graph,
-            fcitiers_est_graph,
+            kpc_est_graph,
             cluster_pc,
             param_dict,
         )

@@ -17,13 +17,13 @@ from clustercausal.utils.Utils import *
 
 if __name__ == "__main__":
     n_jobs = 20
-    # print("STARTING 1st EXPERIMENT")
-    # config_path = (
-    #     "clustercausal\experiments\configs\cluster_pc_simulation_1new.yaml"
-    # )
-    # config_path = config_path.replace("\\", "/")
-    # experiment = ExperimentRunner(config_path)
-    # experiment.run_gridsearch_experiment(n_jobs=n_jobs)
+    print("STARTING 1st EXPERIMENT")
+    config_path = (
+        "clustercausal\experiments\configs\cluster_pc_simulation_1new_kpc.yaml"
+    )
+    config_path = config_path.replace("\\", "/")
+    experiment = ExperimentRunner(config_path)
+    experiment.run_gridsearch_experiment(n_jobs=n_jobs)
 
     # print("STARTING 2nd EXPERIMENT")
     # config_path = (
@@ -39,11 +39,11 @@ if __name__ == "__main__":
     # experiment = ExperimentRunner(config_path)
     # experiment.run_gridsearch_experiment(n_jobs=n_jobs)
 
-    print("STARTING 4th EXPERIMENT")
-    config_path = "clustercausal\experiments\configs\cluster_vsfcitiers_on_tiers_simulation_4new.yaml"
-    config_path = config_path.replace("\\", "/")
-    experiment = ExperimentRunner(config_path)
-    experiment.run_gridsearch_experiment(n_jobs=n_jobs)
+    # print("STARTING 4th EXPERIMENT")
+    # config_path = "clustercausal\experiments\configs\cluster_vsfcitiers_on_tiers_simulation_4new.yaml"
+    # config_path = config_path.replace("\\", "/")
+    # experiment = ExperimentRunner(config_path)
+    # experiment.run_gridsearch_experiment(n_jobs=n_jobs)
 
     # print("STARTING 5th EXPERIMENT")
     # config_path = "clustercausal\experiments\configs\cluster_pc_5.yaml"
